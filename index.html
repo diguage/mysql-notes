@@ -678,7 +678,20 @@ table.CodeRay td.code>pre{padding:0}
 </ul>
 </li>
 <li><a href="#_查询优化器的提示_hint">查询优化器的提示（hint）</a></li>
-<li><a href="#_优化特定类型的查询">优化特定类型的查询</a></li>
+<li><a href="#_优化特定类型的查询">优化特定类型的查询</a>
+<ul class="sectlevel3">
+<li><a href="#_优化_code_count_code_查询">优化 <code>COUNT()</code> 查询</a>
+<ul class="sectlevel4">
+<li><a href="#__code_count_code_的作用"><code>COUNT()</code> 的作用</a></li>
+<li><a href="#_关于_myisam_的神话">关于 MyISAM 的神话</a></li>
+<li><a href="#_简单的优化">简单的优化</a></li>
+<li><a href="#_使用近似值">使用近似值</a></li>
+<li><a href="#_更复杂的优化">更复杂的优化</a></li>
+</ul>
+</li>
+<li><a href="#_优化关联查询">优化关联查询</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a href="#_mysql_code_explain_code_详解">MySQL <code>explain</code> 详解</a>
@@ -4698,7 +4711,101 @@ LIMIT <span class="integer">1</span>;</code></pre>
 </div>
 <div class="sect2">
 <h3 id="_优化特定类型的查询">优化特定类型的查询</h3>
+<div class="sect3">
+<h4 id="_优化_code_count_code_查询">优化 <code>COUNT()</code> 查询</h4>
+<div class="sect4">
+<h5 id="__code_count_code_的作用"><code>COUNT()</code> 的作用</h5>
+<div class="paragraph">
+<p><code>COUNT()</code> 是一个特殊的函数，有两种非常不同的作用：可以统计某个列值的数量，也可以统计行数。在统计列值时要求是非空的（不统计 <code>NULL</code>）。</p>
+</div>
+<div class="paragraph">
+<p>当 MySQL 确认括号内的表达式值不可能为空时，实际就是在统计行数。 <code>COUNT(*)</code> 不会扩展成所有的列；它会忽略所有的列而直接统计所有的行数。</p>
+</div>
+<div class="paragraph">
+<p>一个常见错误是：在括号内指定了一个列却希望统计结果集的行数。如果统计结果集的行数，最好使用 <code>COUNT(*)</code> ，意义清晰，性能也很好。</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_关于_myisam_的神话">关于 MyISAM 的神话</h5>
+<div class="paragraph">
+<p>一个容易产生的误解：MyISAM 的 <code>COUNT()</code> 函数总是非常快，不过这是有前提条件的，即只有没有任何 <code>WHERE</code> 条件的 <code>COUNT(*)</code> 才非常快。MySQL 利用存储引擎的特性直接获取这个值。</p>
+</div>
+<div class="paragraph">
+<p>如果 MySQL 知道某个列 col 不可能为 <code>NULL</code> 值，那么 MySQL 内部会将 <code>COUNT(col)</code> 表达式转化为 <code>COUNT(*)</code>。</p>
+</div>
+<div class="paragraph">
+<p>当统计带 <code>WHERE</code> 子句的结果集行数，可以是统计某个列值的数量时，MyISAM 的 <code>COUNT()</code> 和其他存储引擎没有任何不同。</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_简单的优化">简单的优化</h5>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="comment">-- 书中没有建表语句，根据上下文 SQL 创建</span>
+<span class="class">DROP</span> <span class="type">TABLE</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> city;
+<span class="class">CREATE</span> <span class="type">TABLE</span> city (
+  id   <span class="predefined-type">INTEGER</span> <span class="directive">AUTO_INCREMENT</span> <span class="directive">PRIMARY</span> <span class="type">KEY</span>,
+  name <span class="predefined-type">VARCHAR</span>(<span class="integer">100</span>) <span class="keyword">NOT</span> <span class="predefined-constant">NULL</span>
+) <span class="directive">ENGINE</span> = MyISAM;
 
+<span class="comment">-- 没有优化的 SQL，需要扫描大多数行</span>
+<span class="class">SELECT</span> <span class="predefined">COUNT</span>(*)
+<span class="keyword">FROM</span> city
+<span class="keyword">WHERE</span> id &gt; <span class="integer">5</span>;
+
+<span class="comment">-- 优化后的 SQL，只需要扫描少量的行</span>
+<span class="class">SELECT</span> (<span class="class">SELECT</span> <span class="predefined">COUNT</span>(*)
+        <span class="keyword">FROM</span> city) - <span class="predefined">COUNT</span>(*)
+<span class="keyword">FROM</span> city
+<span class="keyword">WHERE</span> id &lt;= <span class="integer">5</span>;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>在同一个查询中统计同一列的不同值的数量，以减少查询的语句量。可以这样：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="class">DROP</span> <span class="type">TABLE</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> items;
+<span class="class">CREATE</span> <span class="type">TABLE</span> items (
+  id    <span class="predefined-type">INTEGER</span> <span class="directive">AUTO_INCREMENT</span> <span class="directive">PRIMARY</span> <span class="type">KEY</span>,
+  color <span class="predefined-type">VARCHAR</span>(<span class="integer">50</span>)
+);
+
+<span class="class">SELECT</span>
+  <span class="predefined">SUM</span>(<span class="keyword">IF</span>(color = <span class="string"><span class="delimiter">'</span><span class="content">blue</span><span class="delimiter">'</span></span>, <span class="integer">1</span>, <span class="integer">0</span>)) <span class="keyword">AS</span> blue,
+  <span class="predefined">SUM</span>(<span class="keyword">IF</span>(color = <span class="string"><span class="delimiter">'</span><span class="content">red</span><span class="delimiter">'</span></span>, <span class="integer">1</span>, <span class="integer">0</span>))  <span class="keyword">AS</span> red
+<span class="keyword">FROM</span> items;
+
+<span class="class">SELECT</span>
+  <span class="predefined">COUNT</span>(color = <span class="string"><span class="delimiter">'</span><span class="content">blue</span><span class="delimiter">'</span></span> <span class="keyword">OR</span> <span class="predefined-constant">NULL</span>) <span class="keyword">AS</span> blue,
+  <span class="predefined">COUNT</span>(color = <span class="string"><span class="delimiter">'</span><span class="content">red</span><span class="delimiter">'</span></span> <span class="keyword">OR</span> <span class="predefined-constant">NULL</span>)  <span class="keyword">AS</span> red
+<span class="keyword">FROM</span> items;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_使用近似值">使用近似值</h5>
+<div class="paragraph">
+<p>有时候某些业务场景并不要求完全精确的 <code>COUNT</code> 值，此时可以用近似值代替。<code>EXPLAIN</code> 出来的优化器估算的行数就是一个不错的近似值，执行 <code>EXPLAIN</code> 并不需要真正地去执行查询，所以成本很低。</p>
+</div>
+<div class="paragraph">
+<p>很多时候，计算精确值的成本非常高，而计算近似值则非常简单。例如统计网站的当前活跃用户数。</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_更复杂的优化">更复杂的优化</h5>
+<div class="paragraph">
+<p>通常来说， <code>COUNT()</code> 都需要扫描大量的行才能获取精确的结果，因此很难优化。除了上面的方法，还可以使用索引覆盖扫描。</p>
+</div>
+<div class="paragraph">
+<p>如果这还不够，就需要考虑修改应用的架构，可以增加汇总表，或者增加类似 Memcached 这样的外部缓存系统。很快发现陷入一个困境，“快速，精确和实现简单”，三者永远只能满足其二，必须舍掉其中之一。</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化关联查询">优化关联查询</h4>
+
+</div>
 </div>
 </div>
 </div>
@@ -5332,7 +5439,7 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2017-02-09 17:06:44 CST
+Last updated 2017-02-09 17:08:43 CST
 </div>
 </div>
 </body>
