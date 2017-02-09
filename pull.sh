@@ -11,7 +11,7 @@ mkdir $temp_folder
 mv mysql-notes.html $temp_folder/index.html
 cp -R ./images $temp_folder
 
-git checkout gh-pages
+git checkout deploy
 
 rm -rf *
 
@@ -19,9 +19,11 @@ mv $temp_folder/* .
 
 git add .
 
-git commit -am "update pages"
+git commit -am "ready to deploy"
 
-git push origin gh-pages
+git push origin deploy
+
+rsync -avz . deployer@120.92.74.139:/home/deployer/diguage.com/notes/mysql
 
 rm -rf $temp_folder
 
