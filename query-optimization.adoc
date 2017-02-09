@@ -925,10 +925,81 @@ optimizer_switch::
 
 === 优化特定类型的查询
 
+==== 优化 `COUNT()` 查询
 
+===== `COUNT()` 的作用
 
+`COUNT()` 是一个特殊的函数，有两种非常不同的作用：可以统计某个列值的数量，也可以统计行数。在统计列值时要求是非空的（不统计 `NULL`）。
 
+当 MySQL 确认括号内的表达式值不可能为空时，实际就是在统计行数。 `COUNT(*)` 不会扩展成所有的列；它会忽略所有的列而直接统计所有的行数。
 
+一个常见错误是：在括号内指定了一个列却希望统计结果集的行数。如果统计结果集的行数，最好使用 `COUNT(*)` ，意义清晰，性能也很好。
+
+===== 关于 MyISAM 的神话
+
+一个容易产生的误解：MyISAM 的 `COUNT()` 函数总是非常快，不过这是有前提条件的，即只有没有任何 `WHERE` 条件的 `COUNT(*)` 才非常快。MySQL 利用存储引擎的特性直接获取这个值。
+
+如果 MySQL 知道某个列 col 不可能为 `NULL` 值，那么 MySQL 内部会将 `COUNT(col)` 表达式转化为 `COUNT(*)`。
+
+当统计带 `WHERE` 子句的结果集行数，可以是统计某个列值的数量时，MyISAM 的 `COUNT()` 和其他存储引擎没有任何不同。
+
+===== 简单的优化
+
+[source,sql]
+----
+-- 书中没有建表语句，根据上下文 SQL 创建
+DROP TABLE IF EXISTS city;
+CREATE TABLE city (
+  id   INTEGER AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL
+) ENGINE = MyISAM;
+
+-- 没有优化的 SQL，需要扫描大多数行
+SELECT COUNT(*)
+FROM city
+WHERE id > 5;
+
+-- 优化后的 SQL，只需要扫描少量的行
+SELECT (SELECT COUNT(*)
+        FROM city) - COUNT(*)
+FROM city
+WHERE id <= 5;
+----
+
+在同一个查询中统计同一列的不同值的数量，以减少查询的语句量。可以这样：
+
+[source,sql]
+----
+DROP TABLE IF EXISTS items;
+CREATE TABLE items (
+  id    INTEGER AUTO_INCREMENT PRIMARY KEY,
+  color VARCHAR(50)
+);
+
+SELECT
+  SUM(IF(color = 'blue', 1, 0)) AS blue,
+  SUM(IF(color = 'red', 1, 0))  AS red
+FROM items;
+
+SELECT
+  COUNT(color = 'blue' OR NULL) AS blue,
+  COUNT(color = 'red' OR NULL)  AS red
+FROM items;
+----
+
+===== 使用近似值
+
+有时候某些业务场景并不要求完全精确的 `COUNT` 值，此时可以用近似值代替。`EXPLAIN` 出来的优化器估算的行数就是一个不错的近似值，执行 `EXPLAIN` 并不需要真正地去执行查询，所以成本很低。
+
+很多时候，计算精确值的成本非常高，而计算近似值则非常简单。例如统计网站的当前活跃用户数。
+
+===== 更复杂的优化
+
+通常来说， `COUNT()` 都需要扫描大量的行才能获取精确的结果，因此很难优化。除了上面的方法，还可以使用索引覆盖扫描。
+
+如果这还不够，就需要考虑修改应用的架构，可以增加汇总表，或者增加类似 Memcached 这样的外部缓存系统。很快发现陷入一个困境，“快速，精确和实现简单”，三者永远只能满足其二，必须舍掉其中之一。
+
+==== 优化关联查询
 
 
 // 文末
