@@ -69,3 +69,32 @@ MySQL 分两步来执行查询。第一步从 `film` 表找到需要的行。因
 MySQL 5.6 当还需要返回部分查询结果时，不再对所有结果进行排序。
 
 TIP: 从这句话中也可以看出，如果可以，尽量使用一张表中的字段。
+
+
+MySQL 5.0 之后的版本，在某些特殊的场景下是可以使用松散索引扫描的，例如，在一个分组查询中需要找到分组的最大值和最小值：
+
+[source,sql]
+----
+EXPLAIN
+SELECT
+  actor_id,
+  max(film_id)
+FROM film_actor
+GROUP BY actor_id \G
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: range
+possible_keys: PRIMARY,idx_fk_film_id
+          key: PRIMARY
+      key_len: 2
+          ref: NULL
+         rows: 201
+     filtered: 100.00
+        Extra: Using index for group-by
+----
+
+在 `EXPLAIN` 的 `Extra` 字段显示 “Using index for group-by”，表示这里将使用松散索引扫描。如果 MySQL 能写上 “loose index probe”，相信会更好理解。P231
