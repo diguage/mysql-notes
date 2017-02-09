@@ -678,6 +678,7 @@ table.CodeRay td.code>pre{padding:0}
 </ul>
 </li>
 <li><a href="#_查询优化器的提示_hint">查询优化器的提示（hint）</a></li>
+<li><a href="#_优化特定类型的查询">优化特定类型的查询</a></li>
 </ul>
 </li>
 <li><a href="#_mysql_code_explain_code_详解">MySQL <code>explain</code> 详解</a>
@@ -4593,6 +4594,110 @@ LIMIT <span class="integer">1</span>;</code></pre>
 </div>
 <div class="sect2">
 <h3 id="_查询优化器的提示_hint">查询优化器的提示（hint）</h3>
+<div class="paragraph">
+<p>如果对查询优化器选择的执行计划不满意，可以使用优化器提供的几个提示来控制最终的执行计划。</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">HIGH_PRIORITY 和 LOW_PRIORITY</dt>
+<dd>
+<p>当多个语句同事访问某一个表的时候，哪些语句的优先级相对高些、哪些语句的优先级相对低些。</p>
+<div class="paragraph">
+<p>这两个提示只对使用表锁的存储引擎有效，千万不要在 InnoDB 或者其他有细粒度锁机制和并发控制的引擎中使用。</p>
+</div>
+</dd>
+<dt class="hdlist1">DELAYED</dt>
+<dd>
+<p>只对 <code>INSERT</code> 和 <code>REPLACE</code> 有效。</p>
+<div class="paragraph">
+<p>MySQL 会将使用该提示的语句立即返回给客户端，并将插入的行数据放入到缓冲区，然后在表空闲时批量将数据写入。</p>
+</div>
+<div class="paragraph">
+<p>并不是所有的存储引擎都支持；该提示会导致函数 <code>LAST_INSERT_ID()</code> 无法正常工作。</p>
+</div>
+</dd>
+<dt class="hdlist1">STRAIGHT_JOIN</dt>
+<dd>
+<p>放置在 <code>SELECT</code> 语句的 <code>SELECT</code> 关键字之后：是让查询中所有的表按照在语句中出现的顺序进行关联；</p>
+<div class="paragraph">
+<p>放置在任何两个关联表的名字之间：固定其前后两个表的关联顺序。</p>
+</div>
+</dd>
+<dt class="hdlist1">SQL_SMALL_RESULT 和 SQL_BIG_RESULT</dt>
+<dd>
+<p>只对 <code>SELECT</code> 语句有效。</p>
+<div class="paragraph">
+<p>告诉优化器对 <code>GROUP BY</code> 和 <code>DISTINCT</code> 查询如何使用临时表及排序。</p>
+</div>
+<div class="paragraph">
+<p><code>SQL_SMALL_RESULT</code> 告诉优化器结果集很小，可以将结果集放在内存中的索引临时表，以避免排序操作。+
+<code>SQL_BIG_RESULT</code> 告诉优化器结果集可能会非常大，建议使用磁盘临时表做排序操作。</p>
+</div>
+</dd>
+<dt class="hdlist1">SQL_BUFFER_RESULT</dt>
+<dd>
+<p>告诉优化器将查询结果放入到一个临时表，然后尽可能快地释放表锁。使用服务端缓存无须在客户端上消耗太多内存，可以尽快释放对应的表锁。代价是，服务器端需要更多的内存。</p>
+</dd>
+<dt class="hdlist1">SQL_CACHE 和 SQL_NO_CACHE</dt>
+<dd>
+<p>告诉 MySQL 这个结果集释放应该缓存在查询缓存中。</p>
+</dd>
+<dt class="hdlist1">SQL_CALC_FOUND_ROWS</dt>
+<dd>
+<p>让 MySQL 返回的结果集包含更多的信息。查询中加上该提示 MySQL 会计算除去 <code>LIMIT</code> 子句后这个查询要返回的结果集的总数，而实际上只返回 <code>LIMIT</code> 要求的结果集。可以通过函数 <code>FOUND_ROW()</code> 获取这个值。</p>
+</dd>
+<dt class="hdlist1">FOR UPDATE 和 LOCK IN SHARE MODE</dt>
+<dd>
+<p>主要控制 <code>SELECT</code> 语句的锁机制，但只对实现了行级锁的存储引擎有效。该提示会对符合查询条件的数据行加锁。对 <code>INSERT&#8230;&#8203;SELECT</code> 语句在 MySQL 5.0 和更新版本会默认给这些记录加上锁。</p>
+<div class="paragraph">
+<p>唯一内置的支持这两个提示的引擎就是 InnoDB。这两个提示会让某些优化无法正常使用，例如索引覆盖扫描。InnoDB 不能在不访问主键的情况下排他性地锁定行，因为行的版本信息保存在主键中。</p>
+</div>
+</dd>
+<dt class="hdlist1">USE INDEX、IGNORE INDEX 和 FORCE INDEX</dt>
+<dd>
+<p>告诉优化器使用或者不使用哪些索引来查询记录。在 MySQL 5.1 和之后的版本可以通过新增选项 <code>FOR ORDER BY</code> 和 <code>FOR GROUP BY</code> 来指定是否对排序和分组有效。</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>在 MySQL 5.0 和更新版本中，新增了一些参数用来控制优化器的行为：</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">optimizer_search_depth</dt>
+<dd>
+<p>控制优化器在穷举执行计划时的限度。如果查询长时间处于 “Statistics” 状态，那么可以考虑调低此参数。</p>
+</dd>
+<dt class="hdlist1">optimizer_prune_level</dt>
+<dd>
+<p>默认打开。让优化器根据需要扫描的行数来决定是否跳过某些执行计划。</p>
+</dd>
+<dt class="hdlist1">optimizer_switch</dt>
+<dd>
+<p>包含了一些开启/关闭优化器特性的标志位。</p>
+</dd>
+</dl>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">MySQL 升级后的验证</div>
+<div class="paragraph">
+<p>在优化器面前耍一些“小聪明”是不好的。设置的“优化器提示”很可能会让新版的优化策略失效。</p>
+</div>
+<div class="paragraph">
+<p>在 MySQL 5.6 中，优化器的改进也是近些年来最大的一次改进。</p>
+</div>
+<div class="paragraph">
+<p>升级操作建议仔细检查各个细节，以防止一些边界情况影响你的应用程序。</p>
+</div>
+<div class="paragraph">
+<p>使用 Percona Toolkit 中的 <code>pt-upgrade</code> 工具，就可以检查在新版中运行的 SQL 是否与老版本一样，返回相同的结果。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_优化特定类型的查询">优化特定类型的查询</h3>
 
 </div>
 </div>
@@ -5227,7 +5332,7 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2017-02-09 13:33:16 CST
+Last updated 2017-02-09 16:05:26 CST
 </div>
 </div>
 </body>
