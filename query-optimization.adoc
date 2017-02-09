@@ -1,0 +1,767 @@
+== 查询性能优化
+
+查询优化、索引优化、库表结构优化需要齐头并进，一个不落。
+
+
+=== 为什么查询速度会慢？
+
+真正重要的是响应时间。
+
+查询的生命周期大致可以按照顺序来看：从客户端，到服务器，然后在服务器上进行解析，生成执行计划，执行，并返回结果给客户端。在完成这些任务的时候，查询需要在不同的地方花费时间，包括网络，CPU 计算，生成统计信息和执行计划、锁等待（互斥等待）等操作，尤其是向地城存储引擎检索数据的调用，这些调用需要在内存操作、CPU 操作和内存不足时导致的 I/O 操作上消耗时间。
+
+了解查询的生命周期、清楚查询的时间消耗情况对于优化查询有很大的意义。
+
+=== 慢查询基础：优化数据访问
+
+查询性能低下最基本的原因是访问的数据太多。
+
+对于低效的查询，下面两步分析总是有效的：
+
+. 确认应用程序是否在检索大量超过需要的数据。访问了太多的行，有时也可能访问太多的列。
+. 确认 MySQL 服务器层是否在分析大量超过需要的数据行。
+
+查询大量不需要的数据的典型案例：
+
+. 查询不需要的记录
+** 最简单有效的解决方法就是在这样的查询后面加上 `LIMIT`。
+. 多表关联时返回全部列
+. 总是取出全部列
+** 每次看到 `SELECT *` 时都需要用怀疑的眼光审视，是不是真的需要返回全部的列！
+. 重复查询相同的数据
+
+
+最简单的衡量查询开销的三个指标如下：
+
+* 响应时间
+* 扫描的行数
+* 返回的行数
+
+这三个指标都会记录到 MySQL 的慢日志中，所以检查慢日志记录是找出扫描行数过多的查询的好办法。
+
+TIP: 可以写一个脚本来分析 MySQL 的日志，进而找出比较慢的查询。
+
+响应时间::
+响应时间只是表面上的一个值；但，响应时间仍然是最重要的指标。
++
+响应时间是两部分之和：服务时间和排队时间。
++
+服务时间::: 指数据库处理这个查询真正花了多长时间。
+排队时间::: 指服务器因为等待某些资源而没有真正执行查询的时间--可能是等 I/O 操作完成，也可能是等待行锁等待。
++
+一般最常见和重要的等待是 I/O 和锁等待。
+
+https://book.douban.com/subject/26419771/[数据库索引设计与优化] 一书讲述了一种估算查询的响应时间方法：快速上限估计。概括地说，了解这个查询需要哪些索引以及它的执行计划是什么，然后计算大概需要多少个顺序和随机 I/O，再用其乘以在具体硬件条件下一次 I/O 的消耗时间。最后把这些消耗都加起来，就可以获得一个大概参考值来判断当前响应时间是不是一个合理的值。
+
+
+扫描的行数和返回的行数::
+并不是所有的行的访问代价是相同的。较短的行的访问速度更快，内存中的行也比磁盘中的行的访问速度要快得多。
++
+理想情况下扫描的行数和返回的行数应该是相同的。扫描的行数对返回的行数比率通常很小，一般在 1:1 和 10:1 之间。
+
+扫描的行数和访问类型::
+在评估查询开销的时候，需要考虑一下从表中找到某一行数据的成本。
++
+在 `EXPLAIN` 语句中的 `type` 列反应了访问类型。访问类型有很多种，从全表扫描到索引扫描、范围扫描、唯一索引查询、常数引用等。
+
+如果查询没有办法找到合适的访问类型，那么解决的最好办法通常就是增加一个合适的索引。索引让 MySQL 以最高效、扫描行数最少的方式找到需要的记录。
+
+[source,sql]
+----
+USE sakila;
+
+EXPLAIN
+SELECT *
+FROM film_actor
+WHERE film_id = 1;
+
+mysql> EXPLAIN SELECT * FROM film_actor WHERE film_id = 1 \G -- <1>
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 2
+          ref: const
+         rows: 10
+     filtered: 100.00
+        Extra: NULL
+1 row in set, 1 warning (0.00 sec)
+
+ALTER TABLE film_actor
+  DROP FOREIGN KEY fk_film_actor_film;
+
+ALTER TABLE film_actor
+  DROP KEY idx_fk_film_id;
+
+EXPLAIN
+SELECT *
+FROM film_actor
+WHERE film_id = 1;
+
+mysql> EXPLAIN SELECT * FROM film_actor WHERE film_id = 1 \G -- <2>
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: ALL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 5462
+     filtered: 10.00
+        Extra: Using where
+1 row in set, 1 warning (0.00 sec)
+----
+<1> 从下面的结果也能看出，MySQL 在索引 idx_fk_film_id 上使用了 `ref` 访问类型来执行 SQL。
+<2> 删除索引后，访问类型变成了一个全表扫描（ `ALL` ），现在 MySQL 预估需要扫描 5073 条记录来完成这个查询。 `Using where` 表示 MySQL 将通过 `WHERE` 条件来筛选存储引擎返回的记录。
+
+一般 MySQL 能够使用如下三种方式应用 `WHERE` 条件，从好到坏以此为：
+
+* 在索引中使用 `WHERE` 条件来过滤不匹配的记录。这是在存储引擎层完成的。
+* 使用索引覆盖扫描（在 `Extra` 列中出现了 `Using index`）来返回记录，直接从索引中过滤掉不需要的记录并返回命中的结果。这是在 MySQL 服务器层完成的，但无须再回表查询记录。
+* 从数据表中返回数据，然后过滤掉不满足条件的记录（在 `Extra` 列中出现 `Using Where`）。这在 MySQL 服务器层完成，MySQL 需要先从数据表读出记录然后过滤。
+
+好的索引可以让查询使用合适的访问类型，尽可能地值扫描需要的数据行。但也不是说增加索引就能让扫描的行数等于返回的行数。例如 `COUNT(*)` 查询。
+
+不幸的是，MySQL 不会告诉我们生成结果实际上需要扫描多少行数据，而只会告诉我们生成结果时一共扫描了多少行数据。扫描的行数中的大部分都很可能是被 `WHERE` 条件过滤掉的，对最终的结果集并没有贡献。理解一个查询需要扫描多少行和实际需要使用的行数需要先去理解这个查询背后的逻辑和思想。
+
+如果发现查询需要扫描大量的数据但只返回少数的行，那么通常可以尝试下面的技巧去优化它：
+
+* 使用索引覆盖扫描，把所有需要用到的列都放到索引中，这样存储引擎无须回表获取对应行就可以返回结果了。
+* 改变库表结构。例如使用单独的汇总表。
+* 重写这个复杂的查询，让 MySQL 优化器能够以更优化的方式执行这个查询。
+
+=== 重构查询的方式
+
+在优化有问题的查询时，目标应该是找到一个更优的方法获取实际需要的结果--而不一定总是需要从 MySQL 获取一模一样的结果集。
+
+==== 一个复杂查询还是多个简单查询
+
+设计查询的时候一个需要考虑的重要问题是，是否需要将一个复杂的查询分成多个简单的查询。
+
+MySQL 从设计上让连接和断开连接都 很轻量级，在返回一个小的查询结果方面很高效。
+
+MySQL 内部每秒能够扫描内存中上百万行数据。
+
+在应用设计的时候，如果一个查询能够胜任时还写成多个独立查询是不明智的。
+
+==== 切分查询
+
+有时候对于一个大查询我们需要“分而治之”，将大查询切分成小查询，每个查询功能完全一样，只完成一小部分，每次只返回一小部分查询结果。例如删除旧的数据。
+
+TIP: 这个原则不仅仅适用于数据库，在很多地方都适用。
+
+
+==== 分解关联查询
+
+可以对每一个表进行一次单表查询，然后将结果在应用程序中进行关联。
+
+用分解关联查询的方式重构查询有如下的优势：
+
+* 让缓存的效率更高。
+* 将查询分解后，执行单个查询可以减少锁的竞争。
+* 在应用层做关联，可以更容易对数据库进行拆分，更容易做到高性能和可扩展。
+* 查询本身效率也可能会有所提升。
+* 可以减少冗余记录的查询。
+* 这样做相当于在应用中实现了哈希关联，而不是使用 MySQL 的嵌套循环关联。某些场景哈希关联的效率要高很多。
+
+=== 查询执行的基础
+
+当希望 MySQL 能够以更高的性能运行查询时，最好的办法就是弄清楚 MySQL 是如何优化和执行查询的。
+
+image::images/query_execution_path.png[title="查询执行路径", alt="查询执行路径", width="95%"]
+
+当我们向 MySQL 发送一个请求的时候， MySQL 执行如下操作：
+
+. 客户端发送一条查询给服务器。
+. 服务器先检查查询缓存，如果命中了缓存，则立刻返回存储在缓存中的结果。否则进入下一阶段。
+. 服务器进行 SQL 解析、预处理，再由优化器生成对应的执行计划。
+. MySQL 根据优化器生成的执行计划，调用存储引擎的 API 来执行查询。
+. 将结果返回给客户端。
+
+
+==== MySQL 客户端/服务器通信协议
+
+一般来说，不需要去理解 MySQL 通信协议的内部实现细节，只需要大致理解通信协议是如何工作的。MySQL 客户端和服务器之间的通信心意是“半双工”的，这意味着，在任何一个时刻，要么是由服务器向客户端发送数据，要么是由客户端向服务器发送数据，这两个动作不能同时发生。所以，我们无法也无须将一个消息切分成小块独立来发送。
+
+通信简单，也有很多限制。一个明显的限制是，这意味着没法进行流量控制。一旦一段开始发送消息，另一段要接收完整个消息才能响应它。
+
+客户端用一个独立的数据包将查询传给服务器。
+
+相反的，一般服务器响应给用户的数据通常很多，由多个数据包组成。当服务器开始响应客户端请求时，客户端必须完整地接收整个返回结果，而不能简单地只取前面几条结果，然后让服务器停止发送数据。这也是在必要的时候一定要在查询中加上 `LIMIT` 限制的原因。
+
+当客户端从服务器取数据时，看起来是一个拉数据的过程，但实际上是 MySQL 在向客户端推送数据的过程。客户端没法让服务器停下来。
+
+多数连接 MySQL 的库函数都可以获得全部结果集并缓存到内存里，还可以逐行获取需要的数据。默认一般是获得全部结果集并缓存到内存中。
+
+当使用多数连接 MySQL 的库函数从 MySQL 获取数据时，其结果看起来都像是从 MySQL 服务器获取数据，而实际上都是从这个库函数的缓存获取数据。
+
+NOTE: 这里的意思是，处理 `ResultSet` 时，数据已经从 MySQL 服务器上读取过来数据，然后直接从 `ResultSet` 中取数据。
+
+查询状态::
+对于一个 MySQL 连接，或者说一个线程，任何时刻都有一个状态，该状态表示了 MySQL 当前正在做什么。有很多方式查看当前的状态，最简单的是使用 `SHOW FULL PROCESSLIST` 命令。
+Sleep::: 线程正在等待客户端发送新的请求。
+
+Query::: 线程正在执行查询或者正在将结果发送给客户端。
+
+Locked::: 在 MySQL 服务器层，该线程正在等待表锁。在存储引擎级别实现的锁，例如 InnoDB 的行锁，并不会体现在线程状态中。
+
+Analyzing and statistics::: 线程正在收集存储引擎的统计信息，并生成查询的执行计划。
+
+Copying to tmp table [on disk]::: 线程正在执行查询，并且将结果集都复制到一个临时表中，这种状态一般要么是在做 `GROUP BY` 操作，要么是文件排序操作，或者是 `UNION` 操作。如果这个状态后面还有 `on disk` 标记，那表示 MySQL 正在将一个内存临时表放到磁盘上。
+
+Sorting result::: 线程正在对结果集进行排序。
+
+Sending data::: 这表示多种情况：线程可能在多个状态之间传送数据，或者在生成结果集，或者在向客户端返回数据。
+
+==== 查询缓存
+
+在解析一个查询语句之前，如果查询缓存是打开的，那么 MySQL 会优先检查这个查询是否命中查询缓存中的数据。检查是通过对大小写敏感的哈希查找实现的。不匹配则进行下一阶段处理。
+
+命中缓存，那么在返回结果前 MySQL 会检查一次用户权限。如果没有问题，则直接从缓存中拿到结果返回给客户端。这种情况下，查询不会被解析，不用生成执行计划，不会执行。
+
+
+==== 查询优化处理
+
+查询的生命周期的下一步是将一个 SQL 转换成一个执行计划，MySQL 再按照这个执行计划和存储引擎进行交互。这包含多个子阶段： 解析 SQL、预处理、优化 SQL 执行计划。
+
+===== 语法解析器和预处理
+
+首先，MySQL 通过关键字将 SQL 语句进行解析，并生成一课对应的“解析树”。MySQL 解析器将使用 MySQL 语法规则验证和解析查询。
+
+预处理器则根据一些 MySQL 规则进一步检查解析树是否合法。
+
+下一步预处理器会验证权限。通常很快，除非有非常多的权限配置。
+
+===== 查询优化器
+
+一条查询可以有很多种执行方式，最后都返回相同的结果。优化器的作用就是找到这其中最好的执行计划。
+
+MySQL 使用基于成本的优化器，它将尝试预测一个查询使用某种执行计划时的成本，并选择其中成本最小的一个。可以通过查询当前会话的 `Last_query_cost` 的值来得知 MySQL 计算的当前查询的成本。
+
+[source,sql]
+----
+SELECT SQL_NO_CACHE count(*)
+FROM film_actor;
+
+SHOW STATUS LIKE 'Last_query_cost'; -- <1>
+----
+<1> 在不同机器上，结果可能不一样。
+
+这是根据一系列的统计信息计算得来的：每个表或者索引的页面个数、索引的基数（索引中不同值的数量）、索引和数据行的长度、索引分布情况。
+
+优化器在评估成本的时候并不考虑任何层面的缓存，它假设读取任何数据都需要一次磁盘 I/O。
+
+导致 MySQL 优化器选择错误的执行计划的原因：
+
+* 统计信息不准确。 MySQL 依赖存储引擎提供的统计信息来评估成本，但是有的存储引擎提供的信息是准确的，有的偏差可能非常大。
+* 执行计划中的成本估算不等同于实际执行的成本。所以即使统计信息精确，优化器给出的执行计划也可能不是最优的。
+* MySQL 的最优可能和你想的最优不一样。由此可见，根据执行成本选择执行计划并不是完美的模型。
+* MySQL 从不考虑其他并发执行的查询，这可能会影响到当前查询的速度。
+* MySQL 也并不是任何时候都是基于成本的优化。例如全文检索。
+* MySQL 不会考虑不受其控制的操作的成本。
+* 优化器有时无法去估算所有可能的执行计划。
+
+MySQL 的查询优化器是一个非常复杂的部件，它使用了很多优化策略来生成一个最优的执行计划。优化策略可以简单地分为两种，一种是静态优化，一种是动态优化。静态优化可以直接对解析树进行分析，并完成优化。静态优化不依赖于特别的数值。静态优化在第一次完成后就一直有效，即使使用不同的参数值重复执行查询也不会发生变化。可以认为这是一种“编译时优化”。
+
+动态优化则和查询的上下文有关，也可能和很多其他因素有关，需要在每次查询时都重新评估，可以认为是“运行时优化”。有时甚至在查询的执行过程中也会重新优化。
+
+MySQL 能够处理的优化类型：
+
+重新定义关联表的顺序::
+数据表的关联并不总是安装在查询中指定的顺序进行。决定关联的顺序是优化器很重要的一部分功能。
+将外连接转化成内连接::
+并不是所有的 `OUTER JOIN` 语句都必须以外连接的方式执行。
+使用等价变换规则::
+MySQL 可以使用一些等价变换来简化并规范表达式。可以科比能够一些比较，移除一些恒成立和一些恒不成立的判断等等。
+优化 `COUNT()`、`MIN()` 和 `MAX()`::
+索引和列是否可为空通常可以帮助 MySQL 优化这类表达式。例如：从 B-Tree 索引中取最大值或者最小值；没有任何 `WHERE` 条件的 `COUNT(*)` 查询。
+预估并转化为常数表达式::
+当 MySQL 检测到一个表达式可以转化为常数的时候，就会一直把该表达式作为常数进行优化处理。
++
+让人惊讶的是，在优化阶段，有时候甚至一个查询也能够转化为一个常数。例如：在索引列上执行 `MIN()`；甚至主键或者唯一键查找语句。
++
+[source,sql]
+----
+EXPLAIN
+SELECT
+  f.film_id,
+  fa.actor_id
+FROM film f
+  INNER JOIN film_actor fa USING (film_id)
+WHERE f.film_id = 1 \G
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: f
+   partitions: NULL
+         type: const
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 2
+          ref: const
+         rows: 1
+     filtered: 100.00
+        Extra: Using index
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: fa
+   partitions: NULL
+         type: ref
+possible_keys: idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 2
+          ref: const
+         rows: 10
+     filtered: 100.00
+        Extra: Using index
+----
++
+MySQL 分两步来执行查询。第一步从 `film` 表找到需要的行。因为在 `film_id` 字段上有主键索引，所以 MySQL 优化器知道这只会返回一行数据，优化器在生成执行计划的时候，就已经通过索引信息知道将返回多少行数据。因为优化器已经明确知道有多少个值（ `WHERE` 条件中的值）需要做索引查询，所以这里的表访问类型是 `const`。 +
+第二步，MySQL 将第一步中返回的 `film_id` 列当做一个已知取值的列来处理。因为优化器清楚再第一步执行完成后，该值就会是明确的了。注意到正如第一步中一样，使用 `film_actor` 字段对表的访问类型也是 `const`。P212
++
+另一种会看到常数条件的情况是通过等式将常数值从一个表传给另一个表，这可以通过 `WHERE`、`USING` 或者 `ON` 语句来限制某列值为常数。
+覆盖索引扫描::
+当索引中的列包含所有查询中需要使用的列的时候， MySQL 就可以使用索引返回需要的数据，而无须查询对应的数据行。
+子查询优化::
+MySQL 在某些情况下可以将子查询转换成一种效率更高的形式，从而减少多个查询多次对数据进行访问。
+提前终止查询::
+在发现已经满足查询需求的时候，MySQL 总是能够立刻终止查询。例如：`LIMIT` 子句；再例如，发现一个不成立的条件。
++
+[source,sql]
+----
+EXPLAIN
+SELECT film_id
+FROM film
+WHERE film_id = -1 \G
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: NULL
+   partitions: NULL
+         type: NULL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: NULL
+     filtered: NULL
+        Extra: no matching row in const table
+----
++
+从这个例子看到，查询在优化阶段就已经终止。
+等值传播::
+如果两个列的值通过等式关联，那么 MySQL 能够把其中一个列的 `WHERE` 条件传递到另一列上。
+列表 `IN()` 的比较::
+在很多数据库系统中，`IN()` 完全等同于多个 `OR` 条件的子句，因为这两者是完全等价的。而 MySQL 将 `IN()` 列表中的数据先进行排序，然后通过二分查找的方式来确定列表中的值是否满足条件，这是 O(log __n__) 复杂度；转化成 `OR` 查询则为 O(__n__)。
+
+*不要自以为比优化器更聪明！*
+
+
+===== 数据和索引的统计信息
+
+不同的存储引擎可能会存储不同的统计信息（也可以按照不同的格式存储统计信息）。
+
+MySQL 查询优化器在生成查询的执行计划时，需要向存储引擎获取相应的统计信息。存储引擎则提供给优化器对应的统计信息，包括：每个表或者索引有多少个页面、每个表的每个索引的基数是多少、数据行和索引长度、索引的分布信息等等
+
+===== MySQL 如何执行关联查询
+
+MySQL 认为任何一个查询都是一次“关联” -- 并不仅仅是一个查询需要到两个表匹配才叫关联，所以在 MySQL 中，每一个查询，每一个片段（包括子查询，甚至基于单表的 `SELECT`）都可能使关联。
+
+对于 `UNION` 查询，MySQL 先将一系列的单个查询结果放到一个临时表中，然后再重新读出临时表数据来完成 `UNION` 查询。
+
+MySQL 关联执行的策略：MySQL 对任何关联都执行嵌套循环关联操作，即 MySQL 先在一个表中循环取出单条数据，然后再嵌套循环到下一个表中寻找匹配的行，依次下去，知道找到所有表中匹配的行位置。然后根据各个表匹配的行，返回查询中需要的各个列。MySQL 会尝试在最后一个关联表中找到所有匹配的行，如果最后一个关联表无法找到更多的行以后，MySQL 返回到上一层次关联表，看是否能够找到更多的匹配记录，以此类推迭代执行。可以使用如下代码来解释：
+
+[source,sql]
+----
+-- 内关联查询 ----------------------------------------------------
+SELECT
+  tbl1.col1,
+  tbl2.col2
+FROM tbl1
+  INNER JOIN tbl2 USING (col3)
+WHERE tbl1.col1 IN (5, 6);
+
+-- 用伪代码来解释 MySQL 关联执行的策略则是如下：
+outer_iter = iteratro over tbl1 WHERE col1 IN (5, 6)
+outer_row = outer_iter.next
+while outer_row
+    inner_iter = iteratro over tbl2 WHERE col3 = outer_row.col3
+    inner_row  = inner_iter.next
+    while inner_row
+        output [outer_row.col1, inner_row.col2]
+        inner_row = inner_iter.next
+    end
+    outer_row = outer_iter.next
+end
+
+-- 左外关联查询 --------------------------------------------------
+
+SELECT
+  tbl1.col1,
+  tbl2.col2
+FROM tbl1
+  LEFT OUTER JOIN tbl2 USING (col3)
+WHERE tbl1.col1 IN (5, 6);
+
+-- 用伪代码来解释 MySQL 关联执行的策略则是如下：
+outer_iter = iteratro over tbl1 WHERE col1 IN (5, 6)
+outer_row = outer_iter.next
+while outer_row
+    inner_iter = iteratro over tbl2 WHERE col3 = outer_row.col3
+    inner_row  = inner_iter.next
+    if inner_row
+        while inner_row
+            output [outer_row.col1, inner_row.col2]
+            inner_row = inner_iter.next
+        end
+    else
+        output [outer_row.col1, NULL]
+    end
+    outer_row = outer_iter.next
+end
+----
+
+可视化查询执行计划的方法是根据优化器执行的路径绘制出对应的“泳道图”。
+
+image::images/related_query_lane.png[title="关联查询泳道图", alt="关联查询泳道图", width="95%"]
+
+从本质上来说，MySQL 对所有的类型的查询都以同样的方式运行。例如：子查询先放到一个临时表；`UNION` 也用类似的临时表。
+
+TIP: 在 MySQL 5.6 和 MariaDB 中有了重大改变，这两个版本都引入了更加复杂的执行计划。
+
+===== 执行计划
+
+MySQL 生成查询的一棵指令树，然后通过存储引擎执行完成这颗指令树并返回结果。最终的执行计划包含了重构查询的全部信息。
+
+如果读某个查询执行 `EXPLAIN EXTENDED` 后，再执行 `SHOW WARNINGS`，就可以看到重构出的查询。
+
+===== 关联查询优化器
+
+MySQL 优化器最重要的一部分就是关联查询优化，它决定了多个表关联时的顺序。关联查询优化器通过评估不同关联顺序时的成本来选择一个代价最小的关联顺序。
+
+[source,sql]
+----
+EXPLAIN
+SELECT
+  film.film_id,
+  film.title,
+  film.release_year,
+  actor.actor_id,
+  actor.first_name,
+  actor.last_name
+FROM film
+  INNER JOIN film_actor USING (film_id)
+  INNER JOIN actor USING (actor_id) \G
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: actor
+   partitions: NULL
+         type: ALL
+possible_keys: PRIMARY
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 200
+     filtered: 100.00
+        Extra: NULL
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: PRIMARY,idx_fk_film_id
+          key: PRIMARY
+      key_len: 2
+          ref: sakila.actor.actor_id
+         rows: 27
+     filtered: 100.00
+        Extra: Using index
+*************************** 3. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film
+   partitions: NULL
+         type: eq_ref
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 2
+          ref: sakila.film_actor.film_id
+         rows: 1
+     filtered: 100.00
+        Extra: NULL
+3 rows in set, 1 warning (0.00 sec)
+----
+
+从这个执行计划就能能看出这个查询是从 `actor` 开始查询的。对比一下：
+
+[source,sql]
+----
+EXPLAIN
+SELECT STRAIGHT_JOIN
+  film.film_id,
+  film.title,
+  film.release_year,
+  actor.actor_id,
+  actor.first_name,
+  actor.last_name
+FROM film
+  INNER JOIN film_actor USING (film_id)
+  INNER JOIN actor USING (actor_id) \G
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film
+   partitions: NULL
+         type: ALL
+possible_keys: PRIMARY
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 1000
+     filtered: 100.00
+        Extra: NULL
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: PRIMARY,idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 2
+          ref: sakila.film.film_id
+         rows: 5
+     filtered: 100.00
+        Extra: Using index
+*************************** 3. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: actor
+   partitions: NULL
+         type: eq_ref
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 2
+          ref: sakila.film_actor.actor_id
+         rows: 1
+     filtered: 100.00
+        Extra: NULL
+----
+
+如果优化器给出的并不是最优的关联顺序，可以使用 `STRAIGHT_JOIN` 关键字重新查询，让优化器按照你认为的最优的关联顺序执行。绝大多数时候，优化器做出的选择都比普通人的判断更准确。
+
+关联优化器会尝试在所有的关联顺序中选择一个成本最小的来生成执行计划树。
+
+糟糕的是，如果有超过 n 个表关联，那么需要检查 n 的阶乘种关联关系，称之为所有可能的执行计划的 “搜索空间”，搜索空间的增长非常快。当搜索空间非常大的时候，优化器不可能逐一评估每一种关联顺序的成本，优化器选择使用“贪婪”搜索的方式查找“最优”的关联顺序。
+
+===== 排序优化
+
+无论如何排序都是一个成本很高的操作，所以从性能角度考虑，应尽可能避免排序或者尽可能避免对大量数据进行排序。
+
+如果需要排序的数量小于“排序缓冲区”，MySQL 使用内存进行“快速排序”操作。如果内存不够排序，那么 MySQL 会先将数据分块，对每个独立的块使用“快速排序”进行排序，并将各个块的排序结果存放在磁盘上，然后将各个排好序的块进行合并，最后返回排序结果。
+
+MySQL 有如下两种排序算法：
+
+两次传输排序（旧版本使用）::
+读取行指针和需要排序的字段，对其进行排序，然后再根据排序结果读取所需要的数据行。
++
+需要两次数据传输，即需要从数据表中读取两次数据，第二次读取数据的时候，因为是读取排序列进行排序后的所有记录，会产生大量的随机 I/O。
++
+优点：在排序的时候存储尽可能少的数据，让“排序缓冲区”中可能容纳尽可能多的行数进行排序。
+单次传输排序（新版本使用）::
+先读取查询所需要的所有列，然后再根据给定列进行排序，最后直接返回排序结果。
++
+在 MySQL 4.1 和后续更新的版本才引入。
++
+优点：不需要读取两次数据，对于 I/O 密集型的应用，效率高很多，只需一次顺序 I/O 读取所有的数据，无须任何的随机 I/O。
++
+缺点：如果返回的列非常多、非常大，会额外占用大量的空间。
+
+NOTE: 可以通过调整 `max_length_for_sort_data` 来影响 MySQL 排序算法的选择。
+
+TIP: MySQL 在进行文件排序的时候需要使用的临时存储空间可能会比想象的要大得多。
+
+如果 `ORDER BY` 子句中的所有列都来自关联的第一个表，那么 MySQL 在关联处理第一个表的时候就进行文件排序。如果是这样，那么在 MySQL 的 `EXPLAIN` 结果中可以看到 `Extra` 字段会有 `Using filesort`。除此之外的所有情况，MySQL 都会先将管理的结果存放到一个临时表中，然后在所有的关联都结束后，再进行文件排序。这时，在 MySQL 的 `EXPLAIN` 结果的 `Extra` 字段可以看到 `Using temporary; Using filesort`。`LIMIT` 会在排序后应用。
+
+MySQL 5.6 当还需要返回部分查询结果时，不再对所有结果进行排序。
+
+TIP: 从这句话中也可以看出，如果可以，尽量使用一张表中的字段。
+
+
+==== 查询执行引擎
+
+查询执行阶段不是那么复杂：MySQL 只是简单地根据执行计划给出的指令逐步执行。
+
+存储引擎接口有着非常丰富的功能，但底层接口却只有几十个，这些接口像“搭积木”一样能够完成查询的大部分操作。
+
+
+==== 返回结果给客户端
+
+查询执行的最后一个阶段是将结果返回给客户端。
+
+如果查询可以被缓存，那么 MySQL 在这个阶段也会将结果存放到查询缓存中。
+
+MySQL 将结果集返回客户端是一个增量、逐步返回的过程。
+
+
+=== MySQL 查询优化器的局限性
+
+MySQL 的万能“嵌套循环”并不是对每种查询都是最优的。MySQL 查询优化器只对少部分查询不适用，往往可以通过改写查询让 MySQL 高效地完成工作。
+
+
+==== 关联子查询
+
+MySQL 的子查询实现得非常糟糕。最糟糕的一类查询是 `WHERE` 条件中包含 `IN()` 的子查询语句。
+
+[source,sql]
+----
+-- 原始写法
+SELECT *
+FROM film
+WHERE film_id IN (
+  SELECT film_id
+  FROM film_actor
+  WHERE actor_id = 1);
+
+-- 改进后的写法
+SELECT film.*
+FROM film
+  INNER JOIN film_actor USING (film_id)
+WHERE actor_id = 1;
+
+-- 书上提到的第二种写法，但是书上前后矛盾，
+-- 查看执行计划也发现，这种写法有问题。
+SELECT *
+FROM film
+WHERE EXISTS(
+    SELECT *
+    FROM film_actor
+    WHERE actor_id = 1
+          AND film_actor.film_id = film.film_id);
+----
+
+TIP: 在 MySQL 5.7 中，上面第一种 SQL 存在的问题已经得到解决。可以和第二种有同样的表现。
+
+===== 如何用好关联子查询
+
+并不是所有关联子查询的性能都会很差。先测试，然后做出自己的判断。很多时候，关联子查询是一种非常合理、自然，甚至是性能最好的写法。
+
+[source,sql]
+----
+EXPLAIN
+SELECT
+  film_id,
+  language_id
+FROM film
+WHERE NOT EXISTS(
+    SELECT *
+    FROM film_actor
+    WHERE film_actor.film_id = film.film_id);
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: PRIMARY
+        table: film
+   partitions: NULL
+         type: index
+possible_keys: NULL
+          key: idx_fk_language_id
+      key_len: 1
+          ref: NULL
+         rows: 1000
+     filtered: 100.00
+        Extra: Using where; Using index -- <2>
+*************************** 2. row ***************************
+           id: 2
+  select_type: DEPENDENT SUBQUERY  -- <1>
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 2
+          ref: sakila.film.film_id
+         rows: 5
+     filtered: 100.00
+        Extra: Using index  -- <3>
+
+
+-- 使用左外链接“优化”后的 SQL
+EXPLAIN
+SELECT
+  film.film_id,
+  film.language_id
+FROM film
+  LEFT OUTER JOIN film_actor USING (film_id)
+WHERE film_actor.film_id IS NULL \G
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film
+   partitions: NULL
+         type: index
+possible_keys: NULL
+          key: idx_fk_language_id
+      key_len: 1
+          ref: NULL
+         rows: 1000
+     filtered: 100.00
+        Extra: Using index -- <2>
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE  -- <1>
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 2
+          ref: sakila.film.film_id
+         rows: 5
+     filtered: 100.00
+        Extra: Using where; Not exists; Using index -- <3>
+----
+<1> 表 film_actor 的访问类型一个是 `DEPENDENT SUBQUERY`，另外一个是 `SIMPLE`。这是由于语句的写法不同导致的，一个是普通查询，一个是子查询。对于底层存储引擎接口来说，没有任何不同。
+<2> 对于 film 表，第二个查询的 `Extra` 中没有 `Using where`，但不重要，第二个查询的 `USING` 子句和第一个查询的 `WHERE` 子句实际上是完全一样的。
+<3> 第二个表 film_actor 的执行计划的 `Extra` 列有 `Not exists`。这是提前终止算法（early-termination algorithm），MySQL 通过使用 `Not exists` 优化来避免在表 film_actor 的索引中读取额外的行。这完全等效于直接编写 `NOT EXISTS` 子查询。
+
+综上，从理论上来讲，MySQL 将使用完全相同的执行计划来完成这个查询。
+
+*再次强调：应该用测试来验证对子查询的执行计划和响应时间的假设！*
+
+==== `UNION` 的限制
+
+MySQL 无法将限制条件从外层“下推”到内层。例如，无法将 `LIMIT` “下推”到 `UNION` 的各个子句。
+
+==== 索引合并优化
+
+在 MySQL 5.0 和更新的版本中，当 `WHERE` 子句中包含多个复杂条件的时候，MySQL 能够访问单个表的多个索引以合并和交叉过滤的方式来定位需要查找的行。
+
+==== 等值传递
+
+某些时候，等值传递会带来一些意想不到的额外消耗。例如，一个非常大的 `IN()` 列表。
+
+==== 并行执行
+
+MySQL 无法利用多核特性来并行执行查询。
+
+==== 哈希关联
+
+
+
+
+
+// 文末

@@ -1,0 +1,405 @@
+== Schema 设计
+
+良好的逻辑设计和物理设计是高性能的基石。
+
+=== 数据类型的选择
+
+. 更小的通常更好
+. 简单就好
+. 尽量避免 Null
+
+InnoDB 使用单独的位存储 Null 值，所以对于稀疏数据（多数为 Null，少数非 Null）有很好的空间效率。
+
+MySQL 很多数据类型只是别名，可以用 `SHOW CREATE TABLE` 查看对应的基本类型。
+
+==== 整数
+
+整数类型： `TINYINT` 、 `SMALLINT` 、  `MEDIUMINT` 、  `INT` 、  `BIGINT`；分别使用 8、16、24、32、64 位存储空间。存储的范围从 -2^(N-1)^ 到 2^(N-1)^-1。
+
+整数类型有可选的 `UNSIGNED`，表示不允许负值。
+
+有符号和无符号类型使用相同的存储空间，并具有相同的性能，因此可以根据实际情况选择合适的类型。
+
+MySQL 可以为整数类型指定宽度，例如 `INT(11)`，这实际没有意义：它不会限制值的合法范围。对于存储和计算来说， `INT(1)` 和 `INT(20)` 是相同的。
+
+==== 实数
+
+`DECIMAL` 类型用于存储精确的小数。CPU 不支持对 `DECIMAL` 的直接计算。
+
+CPU 直接支持原生浮点计算，所以浮点运算明显更快。
+
+MySQL 5.0 和更高版本中的 `DECIMAL` 类型运行最多 65 个数字。
+
+.测试 `DECIMAL` 类型的最大数字数
+[source,sql]
+----
+DROP TABLE IF EXISTS decimal_test;
+CREATE TABLE decimal_test (
+  col1 DECIMAL(65, 10),
+  col2 DECIMAL(66, 10) -- <1>
+);
+----
+<1> 执行时报错，改为65即可执行。
+
+浮点类型在存储同样范围的值时，通常比 `DECIMAL` 使用更少的空间。 `FLOAT` 使用 4 个字节存储； `DOUBLE` 占用 8 个字节。
+
+MySQL 使用 `DOUBLE` 作为内部浮点计算的类型。
+
+因为需要额外的空间和计算开销，所以应该尽量只在对小数进行精确计算时才使用 `DECIMAL` 。
+
+在数据量比较大的时候，可以考虑使用 `BIGINT` 代替 `DECIMAL` ，将需要存储的货币单位根据小数的位数乘以相应的倍数即可。
+
+==== 字符串类型
+
+从 MySQL 4.1 开始，每个字符串列可以定义自己的字符集和排序规则，或者说校对规则。
+
+`VARCHAR`:: 用于存储可变长字符串，比定长类型更节省空间。
++
+TIP: 例外：MySQL表使用 `ROW_FORMAT=FIXED` 创建的话，每一行都会使用定长存储。
++
+`VARCHAR` 需要使用 1 或 2个额外字节记录字符串的长度：如果列的最大长度小于或者等于255字节，则只使用1个字节表示，否则使用 2 个字节。
++
+`VARCHAR` 节省了存储空间，所以对性能也有帮助。但是，行变长时，如果页内没有更多的空间可以存储，MyISAM 会将行拆成不同的片段存储，InnoDB 则需要分裂页来使行可以放进页内。
++
+WARNING: 每页最多能存多少数据？ 2^8^ = 256， 2^16^ = 65536，如果数据能否超过65536？超过了会怎么样？-- MySQL 中 `VARCHAR` 类型的最大长度限制为 65535。
++
+InnoDB 更灵活，可以把过长的 `VARCHAR` 存储为 `BLOB`。
++
+WARNING: 变化的阈值是多少？
+`CHAR`:: 定长，根据定义分配足够的空间。当存储 `CHAR` 值时，MySQL 会删除所有的末尾空格。`CHAR` 值会根据需要采用空格进行填充以方便比较。
++
+* `CHAR` 适合存储很短的字符串，或者所有值都接近同一个长度，比如密码的 MD5 值。
+* 对于经常变更的数据， `CHAR` 也比 `VARCHAR` 更好，定长不容易产生碎片。
+* 非常短的列， `CHAR` 比 `VARCHAR` 在存储空间上更有效率。
+
+.测试数据两端的空格保留情况
+[source,sql]
+----
+# 测试 CHAR
+DROP TABLE IF EXISTS char_test;
+CREATE TABLE char_test (char_col CHAR(10));
+
+INSERT INTO char_test VALUES ('string1'), ('   string2'), ('string3   ');
+
+SELECT CONCAT("'", char_col, "'") FROM char_test; # <1>
+
+# 测试 VARCHAR
+DROP TABLE IF EXISTS varchar_test;
+CREATE TABLE varchar_test (varchar_col VARCHAR(10));
+
+INSERT INTO varchar_test VALUES ('string1'), ('   string2'), ('string3   ');
+
+SELECT CONCAT("'", varchar_col, "'") FROM varchar_test; # <1>
+----
+<1> 注意观察查询结果中字符串两边的空格变化。
+
+*数据如何存储取决于存储引擎。*
+
+与 `CHAR` 和 `VARCHAR` 类似的类型还有 `BINARY` 和 `VARBINARY`，它们存储的是二进制字符串。二进制字符串存储的是字节码而不是字符。MySQL 填充 `BINARY` 采用的是 `\0` （零字节）而不是空格，在检索时也不会去掉填充值。
+
+二进制比较的优势并不仅仅体现在大小写敏感上。MySQL 比较 `BINARY` 字符串时，每次按一个字节，并且根据该字节的数值进行比较。因此，二进制比字符串比较简单很多，所以也更快。
+
+TIP: 慷慨是不明智的。
+
+===== BLOB和TEXT 类型
+
+`BLOB` 和 `TEXT` 都是为存储很大的数据而设计的字符串数据类型，分别采用二进制和字符串方式存储。
+
+字符串类型： `TINYTEXT`、 `SMALLTEXT`、 `TEXT`、 `MEDIUMTEXT`、 `LONGTEXT` +
+二进制类型： `TINYBLOB`、 `SMALLBLOB`、 `BLOB`、 `MEDIUMBLOB`、 `LONGBLOB`
+
+`BLOB` 是 `SMALLBLOB` 的同义词； `TEXT` 是 `SMALLTEXT` 的同义词。
+
+MySQL 把每个 `BLOB` 和 `TEXT` 值当做一个独立的对象处理。InnoDB 会使用专门的“外部”存储区域来进行存储，此时每个值在行内需要 1 ~ 4 个字节存储一个指针，然后在外部存储区域存储实际的值。
+
+`BLOB` 和 `TEXT` 家族之间仅有的不同是 `BLOB` 类型存储的是二进制，没有排序规则或字符集，而 `TEXT` 类型有字符集和排序规则。
+
+`BLOB` 和 `TEXT` 只对每个列的最前 `max_sort_length` 字节而不是整个字符串做排序。
+
+MySQL 不能将 `BLOB` 和 `TEXT` 列全部长度的字符串进行索引。
+
+===== 使用枚举（ENUM）代替字符串
+
+枚举列可以把一些不重复的字符串存储成一个预定义的集合。MySQL 在存储枚举时非常紧凑，会根据列表值的数量压缩到一个或者两个字节中。MySQL 在内部会将每个值在列表中的位置保存为整数，并且在表的 _.frm_ 文件中保存 “数字-字符串” 映射关系的 “查找表”。
+
+.测试枚举的存储值
+[source,sql]
+----
+DROP TABLE IF EXISTS enum_test;
+CREATE TABLE enum_test (e ENUM ('fish', 'apple', 'dog'));
+
+INSERT INTO enum_test (e) VALUES ('fish'), ('dog'), ('apple'); # <1>
+
+SELECT e + 0 FROM enum_test;
+
+SELECT e FROM enum_test ORDER BY e; # <2>
+
+SELECT e FROM enum_test ORDER BY field(e, 'apple', 'dog', 'fish'); # <3>
+----
+<1> 三行数据实际存储为整数，而不是字符串。
+<2> 测试排序性
+<3> 根据定义的字符串排序
+
+如果使用数字作为 `ENUM` 枚举常量，很容易导致混乱。尽量避免这么做。
+
+枚举字段是按照内部存储的整数而不是定义的字符串进行排序的。一种绕过这种限制的方式是按照需要的顺序来定义枚举列。也可以在查询中使用 `FIELD()` 函数显式地指定排序顺序，但是会导致 MySQL 无法利用索引消除排序。
+
+枚举最不好的地方是，字符串列表是固定的，添加或删除字符串必须使用 `ALTER TABLE`。在 MySQL 5.1 中支持只在列表末尾添加元素，而不用重建整个表。
+
+把枚举保存为整数，必须查找才能转换为字符串，有开销。尤其和字符串的列关联查询时，甚至不如字符串关联字符性能好。
+
+通用的设计实践：在“查找表”时采用整数主键而避免采用基于字符串进行关联。
+
+根据 `SHOW TABLE STATUS` 命令输出结果中 `Data_length` 列的值，把列转换为 `ENUM` 可以让表的大小缩小.
+
+// TODO 补充说明
+
+==== 日期和时间类型
+
+MySQL 能存储的最小时间粒度为秒。但，也可以使用微秒级的粒度进行临时运算。
+
+`DATETIME`:: 保存大范围的值，从 1001 年到 9999 年，精度为秒。把日期和时间封装到格式为 YYYYMMDDHHMMSS 的整数中，与时区无关。使用 8 个字节的存储空间。
+`TIMESTAMP`:: 保存从 1970 年 1 月 1 日午夜以来的秒数，和 UNIX 时间戳相同。`TIMESTAMP` 只使用 4 个字节的存储空间，范围是从 1970 年到 2038 年。
+
+MySQL 4.1 以及更新的版本按照 `DATETIME` 的方式格式化 `TIMESTAMP` 的值。`TIMESTAMP` 的存储格式在各个版本都是一样的。
+
+`TIMESTAMP` 显示的值也依赖于时区。MySQL 服务器、操作系统以及客户端连接都有时区设置。因此，存储值为 0 的 `TIMESTAMP` 在美国东部时区显示为 “1969-12-31 19:00:00”，与格林尼治时间差5个小时。
+
+如果在多个时区存储或访问数据， `TIMESTAMP` 和 `DATETIME` 的行为将会很不一样。前者提供的值与时区有关，后者则保留文本表示的日期和时间。
+
+TIP: 如果在东八区保存为 2016年12月05日17:34:17，在格林尼治显示为多少？
+
+默认情况下，如果插入时没有指定第一个 `TIMESTAMP` 列的值，MySQL 则设置这个列的值为当前时间。
+
+`TIMESTAMP` 列默认为 `NOT NULL`。
+
+通常应该尽量使用 `TIMESTAMP` ，因为它比 `DATETIME` 空间效率更高。
+
+可以使用 `BIGINT` 类型存储微秒级别的时间戳，或者使用 `DOUBLE` 存储秒之后的小数部分。
+
+
+==== 位数据类型
+
+==== 选择标识符（键列）
+
+更有可能使用标识列与其他值进行比较，或者通过标识列寻找其他列。
+
+选择标识列的类型时，不仅仅需要**考虑存储类型**，还需要**考虑 MySQL 对这种类型怎么执行计算和比较**。
+
+一旦选定一种类型，要确保在所有关联表中都使用同样的类型。类型之间需要精确匹配，包括像 `UNSIGNED` 这样的属性。混用不同数据类型可能导致性能问题，在比较操作时隐式类型转换也可能导致很难发现的错误。
+
+在可以满足值的范围的需求，并且预留为了增长空间的前提下，应该选择最小的数据类型。
+
+整数类型:: 整数通常是标识列最好的选择，因为它们很快并且可以使用 `AUTO_INCREMENT`。
+`ENUM` 和 `SET` 类型:: 通常是一个糟糕的选择。 `ENUM` 和 `SET` 列适合存储固定信息。
+字符串类型:: 如果可能，应该避免使用字符串作为标识列，因为它们很消耗空间，并且通常比数字类型慢。MyISAM 默认对字符串使用压缩索引，这会导致查询慢很多。
++
+使用完全“随机”的字符串也需要多加注意，例如 MD5()、SHA1()、 UUID()产生的字符串。这些新值会任意分布在很大的空间内，这会导致 `INSERT` 以及一些 `SELECT` 语句变得很慢：
++
+* 插入值会随机地写到索引的不同位置，所以使得 `INSERT` 语句更慢。这会导致页分裂、磁盘随机访问，以及对于聚簇存储引擎产生聚簇索引碎片。
+* `SELECT` 语句会变得更慢，因为逻辑上相邻的行会分布在磁盘和内存的不同地方。
+* 随机值导致缓存对所有类型的查询语句效果都很差，因为会使得缓存赖以工作的局部访问性原理失效。如果真个数据集都一样的“热”，那么缓存任何一部分特别数据到内存都没有好处；如果工作集比内存大，缓存将会有很多刷新和不命中。
+
+如果存储 UUID 值，则应该移除 “-” 符号；更好的做法是，使用 `UNHEX()` 函数转换 UUID 值为 16 字节的数字，并且存储在一个 `BINARY(16)` 列中。检索时可以通过 `HEX()`函数来格式化为十六进制格式。
+
+UUID 值还是有一定的顺序的。
+
+
+==== 特殊类型数据
+
+* 低于秒级精度的时间戳
+* IPv4 地址 -- `INET_ATON()` 和 `INET_NTOA()`。
+
+=== MySQL Schema 设计中的陷阱
+
+太多的列:: MySQL 的存储引擎 API 工作时需要在服务器层和存储引擎层之间通过行缓冲格式拷贝数据，然后在服务器层将缓冲内容解码成各个列。从行缓冲中将解码过的列转换成行数据结构的操作代价是非常高的。 MyISAM 定长行结构正好匹配，不需要转换。MyISAM 的变长行结构和 InnoDB 的行结构则总是需要转换。**转换的代价依赖于列的数量。**
+太多的关联:: MySQL 限制了每个关联操作最多只能有 61 张表。一个粗略的经验法则，如果希望查询执行得快速且并发性好，单个查询最好在 12 个表以内做关联。
+全能的枚举:: 注意防止过度使用枚举。修改枚举，就需要 `ALTER TABLE`，在 5.1 和更新版本中，只有在末尾增加值时，不需要 `ALTER TABLE`。
+变相的枚举:: 枚举列允许在列中存储一组定义值中的单个值，集合（ `SET` ）列则允许在列中存储一组定义值中的一个或多个值。比如: `CREATE TABLE set_test ( is_default SET ('Y', 'N') NOT NULL DEFAULT 'N' );` 真假只有一个，定义为枚举更好。
+非此发明的 NULL:: 建议不要存 NULL。但是不要走极端。当确实需要表示未知值时也不要害怕使用 NULL。处理 NULL 确实不容易，但有时候会比它的替代方案更好。
+
+=== 范式和反范式
+
+第一范式:: 符合1NF的关系中的每个属性都不可再分。1NF是所有关系型数据库的最基本要求。
+
+// TODO: 回头再补
+
+https://www.zhihu.com/question/24696366/answer/29189700[解释一下关系数据库的第一第二第三范式？ - 刘慰的回答 - 知乎]
+
+*范式化通常带来的好处：*
+
+* 范式化的更新操作通常比反范式化要快。
+* 当数据较好地范式化时，就只有很少或者没有重复数据，所以只需要修改更少的数据。
+* 范式化的表通常更小，可以更好地存放在内存里，所以执行操作会更快。
+* 很少有多余的数据意味着检索列表数据时，更少需要 `DISTINCT` 或者 `GROUP BY` 语句。
+
+范式化设计的 Schema 的缺点是通常需要关联。
+
+*反范式的优缺点*
+
+* 反范式化的 Schema 因为所有数据都在一张表中，可以很好地避免关联。
+* 单独的表也能使用更有效的索引策略。
+
+*混用范式化和反范式化*
+
+完全的范式化和完全的反范式化 Schema 都是实验室里才有的东西。在实际应用中经常需要混用，可能使用部分范式化的 Schema、缓存表，以及其他技巧。
+
+最常见的反范式化数据的方法是复制或者缓存，在不同的表中存储相同的特定列。
+
+从父表冗余一些数据到子表的利益是排序的需要。
+
+缓存衍生值也是有用的。
+
+=== 缓存表和汇总表
+
+有时提升性能最好的方法是在同一张表中保存衍生的冗余数据；有时也需要创建一张完全独立的汇总表或缓存表。
+
+缓存表表示存储那些可以比较简单地从 Schema 其他表获取数据的表。 +
+汇总表表示保存的是使用 `GROUP BY` 语句聚合数据的表。
+
+一个有用的技巧是对缓存表使用不同的存储引擎。例如：主表用 InnoDB，使用 MyISAM 作为缓存表的引擎将会得到更小的索引占用空间，并且可以做全文检索。
+
+TIP: 全文检索还是使用专门的工具，比如 ElasticSearch 更好。
+
+在使用缓存表和汇总表时，必须决定是实时维护数据还是定时重建。看需求。定时重建不仅节省资源，还保持表不会有很多碎片，以及完全顺序组织的索引（这会更加高效）。
+
+当重建汇总表和缓存表时，使用“影子表”来保证数据在操作时依然可用。
+
+[source,sql]
+----
+DROP TABLE IF EXISTS my_summary_new, my_summary_old;
+
+CREATE TABLE my_summary_new LIKE my_summary;
+
+-- TODO：执行汇总操作
+
+RENAME TABLE my_summary TO my_summary_old, my_summary_new TO my_summary;
+----
+
+==== 物化视图
+
+物化视图是预先计算并且存储在磁盘上的表，可以通过各种各样的策略刷新和更新。
+
+MySQL 并不原生支持物化视图。
+
+Justin Swanhart 的开源工具 Flexviews， https://github.com/greenlion/swanhart-tools[Swanhart Toolkit]。
+
+==== 计数器表
+
+可以利用 `CurrentHashMap` 分段锁的思想，将对同一个计算器的修改，打散到多个变量上，然后在求和。
+
+[source,sql]
+----
+DROP TABLE IF EXISTS hit_counter;
+CREATE TABLE hit_counter (
+  slot TINYINT UNSIGNED NOT NULL  PRIMARY KEY,
+  cnt  INT UNSIGNED     NOT NULL
+)ENGINE = InnoDB;
+
+UPDATE hit_counter SET cnt = cnt + 1 WHERE slot = RAND() * 100;
+
+SELECT SUM(cnt) FROM hit_counter;
+----
+
+一个常见需要时每个一段时间开始一个新的计算器（例如，每天一个）。
+
+[source,sql]
+----
+DROP TABLE IF EXISTS daily_hit_counter;
+CREATE TABLE daily_hit_counter (
+  day  DATE             NOT NULL,
+  slot TINYINT UNSIGNED NOT NULL,
+  cnt  INT UNSIGNED     NOT NULL,
+  PRIMARY KEY (day, slot)
+)ENGINE = InnoDB;
+
+-- 插入数据
+INSERT INTO daily_hit_counter (day, slot, cnt)
+VALUES (current_date, rand() * 100, 1)
+ON DUPLICATE KEY UPDATE cnt = cnt + 1;
+
+-- 定期执行：合并所有结果到 0 号槽，并且删除所有其他的槽：
+UPDATE daily_hit_counter AS c
+  INNER JOIN (
+               SELECT
+                 day,
+                 sum(cnt)  AS cnt,
+                 min(slot) AS mslot
+               FROM daily_hit_counter
+               GROUP BY day
+             ) AS x USING (day)
+SET c.cnt = if(c.slot = x.mslot, x.cnt, 0),
+  c.slot  = if(c.slot = x.mslot, 0, c.slot);
+DELETE FROM daily_hit_counter WHERE slot <> 0 AND cnt = 0;
+----
+
+TIP: 为了提升度查询的速度，可以建立额外索引；这样会增加些查询的负担，虽然写的慢，但是更显著提高了读操作的性能。
+
+=== 加快 `ALTER TABLE` 操作的速度
+
+MySQL 的 `ALTER TABLE` 操作的性能对于大表来说是个大问题。 MySQL 执行大部分修改表结构操作的方法是用新的结构创建一个空表，从旧表中查出所有数据插入新表，然后删除旧表。
+
+一般而言，大部分 `ALTER TABLE` 操作将导致 MySQL 服务中断。有两个技巧可以避免：
+
+* 先在一台不提供服务的机器上执行 `ALTER TABLE` 操作，然后和提供服务的主库进行切换；
+* 影子拷贝：用要求的表结构创建一张和源表无关的新表，然后通过重命名和删表的操作交换两张表。还有一些第三方工具可以完成：
+** Facebook https://launchpad.net/mysqlatfacebook[online schema change]
+** Shlomi Noach http://code.openark.org[openark toolkit]
+** http://www.percona.com/software[Percona Toolkit]
+
+不是所有的 `ALTER TABLE` 操作都会引起表重建。
+
+[source,sql]
+----
+-- 很慢，N 多次读和 N 多次插入操作
+ALTER TABLE film
+  MODIFY COLUMN rental_duration TINYINT(3) NOT NULL DEFAULT 5;
+
+-- 直接修改 _.frm_ 文件而不设计表数据。操作非常快。
+ALTER TABLE film
+  ALTER COLUMN rental_duration SET DEFAULT 5;
+----
+
+TIP: `ALTER TABLE` 允许使用 `ALTER COLUMN`、 `MODIFY COLUMN` 和 `CHANGE COLUMN` 语句修改列。这三种操作都是不一样的。 _有什么不一样呢？_
+
+==== 只修改 _.frm_ 文件
+
+下面的这些操作有可能不需要重建表：
+
+* 移除一个列的 `AUTO_INCREMENT` 属性；
+* 增加、移除，或更改 `ENUM` 和 `SET` 常量。
+
+基本的技术是为想要的表结构创建一个新的 _.frm_ 文件，然后用它替换掉已经存在的那张表的 _.frm_ 文件。步骤如下：
+
+. 创建一张有相同结构的空表，并进行所需要的修改；
+. 执行 `FLUSH TABLES WITH READ LOCK`。这将会关闭所有正在使用的表，并且禁止任何表被打开；
+. 交换 _.frm_ 文件；
+. 执行 `UNLOCK TABLES` 来释放第2步的读锁。
+
+==== 快速创建 MyISAM 索引
+
+为了高效地载入数据到 MyISAM 表中，有一个常用的技巧是先禁用索引、载入数据，然后重新启用索引。
+
+[source,sql]
+----
+ALTER TABLE load_data DISABLE KEYS;
+
+-- 载入数据
+
+ALTER TABLE load_data ENABLE KEYS;
+----
+
+不过，这个办法对唯一索引无效，因为 `DISABLE KEYS` 只对非唯一索引有效。
+
+现代版本的 InnoDB 中有类似的技巧。
+
+=== 总结
+
+* 尽量避免过度设计；
+* 使用小而简单的合适数据类型，除非真的需要，否则应尽可能避免使用 `NULL`；
+* 尽量使用相同的数据类型存储相似或相关的值，尤其是要在关联条件中使用的列；
+* 注意可变长字符串，其在临时表和排序时可能导致悲观的按最大长度分配内存；
+* 尽量使用整型定义标识列；
+* 避免使用 MySQL 已经遗弃的特性，例如指定浮点数的精度，或者整型的显示宽度；
+* 小心使用 `ENUM` 和 `SET`；
+* 最好避免使用 `BIT`。
