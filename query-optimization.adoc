@@ -802,6 +802,72 @@ possible_keys: PRIMARY,idx_fk_film_id
 
 ==== 最大值和最小值优化
 
+对于 `MIN()` 和 `MAX()` 查询，MySQL 的优化做得并不好。
+
+[source,sql]
+----
+SELECT MIN(actor_id)
+FROM actor
+WHERE first_name = 'PENELOPE';
+----
+
+`first_name` 字段没有索引，会做一次全表扫描。如能使用主键扫描，当 MySQL 读到第一个满足条件的记录的时候，就是我们需要的最小值了。可以通过查看 `SHOW STATUS` 的全表扫描计数器来验证这点。
+
+一个曲线的优化方法是移除 `MIN()`，然后使用 `LIMIT` 来重写查询：
+
+[source,sql]
+----
+SELECT actor_id
+FROM actor
+USE INDEX (PRIMARY)
+WHERE first_name = 'PENELOPE'
+LIMIT 1;
+----
+
+这个 SQL 已经无法表达她的本意了。
+
+一般我们通过 SQL 告诉服务器我们需要什么数据，由服务器来决定如何最优地获取数据。
+
+有时候为了获得更高的性能，我们不得不放弃一些原则。
+
+==== 在同一个表上查询和更新
+
+MySQL 不允许对同一张表同时进行查询和更新。
+
+[source,sql]
+----
+-- 书上没有给表的定义，根据上下文 SQL 自行添加
+DROP TABLE IF EXISTS tbl;
+CREATE TABLE tbl (
+  id   INTEGER AUTO_INCREMENT PRIMARY KEY,
+  type TINYINT,
+  cnt  INTEGER DEFAULT 0
+);
+
+UPDATE tbl AS outer_tbl
+SET cnt = (
+  SELECT count(*)
+  FROM tbl AS inner_tbl
+  WHERE inner_tbl.type = outer_tbl.type
+);  -- <1>
+
+UPDATE tbl
+  INNER JOIN (
+               SELECT
+                 type,
+                 count(*) AS cnt
+               FROM tbl
+               GROUP BY type
+             ) AS der USING (type)
+SET tbl.cnt = der.cnt; -- <2>
+----
+<1> 报错 “[HY000][1093] You can't specify target table 'outer_tbl' for update in FROM clause”
+<2> 通过使用生成表的形式来绕过上面的限制。
+
+
+=== 查询优化器的提示（hint）
+
+
 
 
 
