@@ -6,7 +6,7 @@ D瓜哥的 MySQL 学习笔记。
 
 Github 对 Asciidoctor 的支持不是特别完善，另外很多人可能没有处理 Asciidoc 的工具。所以，D瓜哥把该文档处理后发布出来了。查看该文档内容请看下面官网。
 
-*该笔记官网：<http://notes.diguage.com/mysql/>。*
+*该笔记官网： http://notes.diguage.com/mysql/ 。*
 
 == 文档来源
 
