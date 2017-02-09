@@ -674,8 +674,10 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#_哈希关联">哈希关联</a></li>
 <li><a href="#_松散索引扫描">松散索引扫描</a></li>
 <li><a href="#_最大值和最小值优化">最大值和最小值优化</a></li>
+<li><a href="#_在同一个表上查询和更新">在同一个表上查询和更新</a></li>
 </ul>
 </li>
+<li><a href="#_查询优化器的提示_hint">查询优化器的提示（hint）</a></li>
 </ul>
 </li>
 <li><a href="#_mysql_code_explain_code_详解">MySQL <code>explain</code> 详解</a>
@@ -4507,8 +4509,91 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 </div>
 <div class="sect3">
 <h4 id="_最大值和最小值优化">最大值和最小值优化</h4>
-
+<div class="paragraph">
+<p>对于 <code>MIN()</code> 和 <code>MAX()</code> 查询，MySQL 的优化做得并不好。</p>
 </div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="class">SELECT</span> <span class="predefined">MIN</span>(actor_id)
+<span class="keyword">FROM</span> actor
+<span class="keyword">WHERE</span> first_name = <span class="string"><span class="delimiter">'</span><span class="content">PENELOPE</span><span class="delimiter">'</span></span>;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>first_name</code> 字段没有索引，会做一次全表扫描。如能使用主键扫描，当 MySQL 读到第一个满足条件的记录的时候，就是我们需要的最小值了。可以通过查看 <code>SHOW STATUS</code> 的全表扫描计数器来验证这点。</p>
+</div>
+<div class="paragraph">
+<p>一个曲线的优化方法是移除 <code>MIN()</code>，然后使用 <code>LIMIT</code> 来重写查询：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="class">SELECT</span> actor_id
+<span class="keyword">FROM</span> actor
+USE <span class="type">INDEX</span> (<span class="directive">PRIMARY</span>)
+<span class="keyword">WHERE</span> first_name = <span class="string"><span class="delimiter">'</span><span class="content">PENELOPE</span><span class="delimiter">'</span></span>
+LIMIT <span class="integer">1</span>;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>这个 SQL 已经无法表达她的本意了。</p>
+</div>
+<div class="paragraph">
+<p>一般我们通过 SQL 告诉服务器我们需要什么数据，由服务器来决定如何最优地获取数据。</p>
+</div>
+<div class="paragraph">
+<p>有时候为了获得更高的性能，我们不得不放弃一些原则。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_在同一个表上查询和更新">在同一个表上查询和更新</h4>
+<div class="paragraph">
+<p>MySQL 不允许对同一张表同时进行查询和更新。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="comment">-- 书上没有给表的定义，根据上下文 SQL 自行添加</span>
+<span class="class">DROP</span> <span class="type">TABLE</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> tbl;
+<span class="class">CREATE</span> <span class="type">TABLE</span> tbl (
+  id   <span class="predefined-type">INTEGER</span> <span class="directive">AUTO_INCREMENT</span> <span class="directive">PRIMARY</span> <span class="type">KEY</span>,
+  type <span class="predefined-type">TINYINT</span>,
+  cnt  <span class="predefined-type">INTEGER</span> <span class="directive">DEFAULT</span> <span class="integer">0</span>
+);
+
+<span class="class">UPDATE</span> tbl <span class="keyword">AS</span> outer_tbl
+<span class="class">SET</span> cnt = (
+  <span class="class">SELECT</span> <span class="predefined">count</span>(*)
+  <span class="keyword">FROM</span> tbl <span class="keyword">AS</span> inner_tbl
+  <span class="keyword">WHERE</span> inner_tbl.type = outer_tbl.type
+);  <i class="conum" data-value="1"></i><b>(1)</b>
+
+<span class="class">UPDATE</span> tbl
+  <span class="keyword">INNER</span> <span class="keyword">JOIN</span> (
+               <span class="class">SELECT</span>
+                 type,
+                 <span class="predefined">count</span>(*) <span class="keyword">AS</span> cnt
+               <span class="keyword">FROM</span> tbl
+               <span class="keyword">GROUP</span> <span class="keyword">BY</span> type
+             ) <span class="keyword">AS</span> der <span class="keyword">USING</span> (type)
+<span class="class">SET</span> tbl.cnt = der.cnt; <i class="conum" data-value="2"></i><b>(2)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>报错 “[HY000][1093] You can&#8217;t specify target table 'outer_tbl' for update in FROM clause”</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>通过使用生成表的形式来绕过上面的限制。</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_查询优化器的提示_hint">查询优化器的提示（hint）</h3>
+
 </div>
 </div>
 </div>
@@ -5142,7 +5227,7 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2017-02-09 13:19:28 CST
+Last updated 2017-02-09 13:33:16 CST
 </div>
 </div>
 </body>
