@@ -523,6 +523,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="toc" class="toc">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
+<li><a href="#_官网及版本库">官网及版本库</a></li>
 <li><a href="#_schema_设计">Schema 设计</a>
 <ul class="sectlevel2">
 <li><a href="#_数据类型的选择">数据类型的选择</a>
@@ -671,6 +672,8 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#_等值传递">等值传递</a></li>
 <li><a href="#_并行执行">并行执行</a></li>
 <li><a href="#_哈希关联">哈希关联</a></li>
+<li><a href="#_松散索引扫描">松散索引扫描</a></li>
+<li><a href="#_最大值和最小值优化">最大值和最小值优化</a></li>
 </ul>
 </li>
 </ul>
@@ -717,6 +720,26 @@ table.CodeRay td.code>pre{padding:0}
 </td>
 </tr>
 </table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_官网及版本库">官网及版本库</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>本文档的版本库托管在 Github 上，另外单独发布。</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">本文档官网</dt>
+<dd>
+<p><a href="http://notes.diguage.com/mysql/" class="bare">http://notes.diguage.com/mysql/</a> 。为了方便阅读，这里展示了处理好的文档。阅读请点击这个网址。</p>
+</dd>
+<dt class="hdlist1">本文档版本库</dt>
+<dd>
+<p><a href="https://github.com/diguage/mysql-notes" class="bare">https://github.com/diguage/mysql-notes</a> 。欢迎大家发送 PR。</p>
+</dd>
+</dl>
 </div>
 </div>
 </div>
@@ -4433,6 +4456,57 @@ possible_keys: idx_fk_film_id
 </div>
 <div class="sect3">
 <h4 id="_哈希关联">哈希关联</h4>
+<div class="paragraph">
+<p>MariaDB 已经实现了真正的哈希关联。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_松散索引扫描">松散索引扫描</h4>
+<div class="paragraph">
+<p>MySQL 并不支持松散索引扫描。通常，MySQL 的索引扫描需要先定义一个起点和终点，即使需要的数据只是这段索引中很少数的几个，MySQL 仍需要扫描这段索引中每一个条目。</p>
+</div>
+<div class="paragraph">
+<p>例如：所以字段是（a, b），查询 b 字段区间值。可以逐个 a 去定位指点 b，这样效果就会很好。</p>
+</div>
+<div class="paragraph">
+<p>MySQL 5.0 之后的版本，在某些特殊的场景下是可以使用松散索引扫描的，例如，在一个分组查询中需要找到分组的最大值和最小值：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql">EXPLAIN
+<span class="class">SELECT</span>
+  actor_id,
+  <span class="predefined">max</span>(film_id)
+<span class="keyword">FROM</span> film_actor
+<span class="keyword">GROUP</span> <span class="keyword">BY</span> actor_id <span class="error">\</span>G
+
+*************************** <span class="error">1</span>. <span class="type">row</span> ***************************
+           id: <span class="integer">1</span>
+  select_type: SIMPLE
+        <span class="type">table</span>: film_actor
+   partitions: <span class="predefined-constant">NULL</span>
+         type: range
+possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
+          <span class="type">key</span>: <span class="directive">PRIMARY</span>
+      key_len: <span class="integer">2</span>
+          ref: <span class="predefined-constant">NULL</span>
+         rows: <span class="integer">201</span>
+     filtered: <span class="float">100.00</span>
+        Extra: <span class="keyword">Using</span> <span class="type">index</span> <span class="keyword">for</span> <span class="keyword">group</span>-<span class="keyword">by</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>在 <code>EXPLAIN</code> 的 <code>Extra</code> 字段显示 “Using index for group-by”，表示这里将使用松散索引扫描。如果 MySQL 能写上 “loose index probe”，相信会更好理解。</p>
+</div>
+<div class="paragraph">
+<p>一个简单的绕过问题的办法就是给前面的列加上可能的常数值。</p>
+</div>
+<div class="paragraph">
+<p>在 MySQL 5.6 之后的版本，关于松散索引扫描的一些限制会通过“索引条件下推（index condition pushdown）”的方式来解决。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_最大值和最小值优化">最大值和最小值优化</h4>
 
 </div>
 </div>
@@ -4981,6 +5055,36 @@ possible_keys: idx_fk_film_id
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<p>MySQL 5.0 之后的版本，在某些特殊的场景下是可以使用松散索引扫描的，例如，在一个分组查询中需要找到分组的最大值和最小值：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql">EXPLAIN
+<span class="class">SELECT</span>
+  actor_id,
+  <span class="predefined">max</span>(film_id)
+<span class="keyword">FROM</span> film_actor
+<span class="keyword">GROUP</span> <span class="keyword">BY</span> actor_id <span class="error">\</span>G
+
+*************************** <span class="error">1</span>. <span class="type">row</span> ***************************
+           id: <span class="integer">1</span>
+  select_type: SIMPLE
+        <span class="type">table</span>: film_actor
+   partitions: <span class="predefined-constant">NULL</span>
+         type: range
+possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
+          <span class="type">key</span>: <span class="directive">PRIMARY</span>
+      key_len: <span class="integer">2</span>
+          ref: <span class="predefined-constant">NULL</span>
+         rows: <span class="integer">201</span>
+     filtered: <span class="float">100.00</span>
+        Extra: <span class="keyword">Using</span> <span class="type">index</span> <span class="keyword">for</span> <span class="keyword">group</span>-<span class="keyword">by</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>在 <code>EXPLAIN</code> 的 <code>Extra</code> 字段显示 “Using index for group-by”，表示这里将使用松散索引扫描。如果 MySQL 能写上 “loose index probe”，相信会更好理解。P231</p>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5038,7 +5142,7 @@ possible_keys: idx_fk_film_id
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2017-02-09 12:58:32 CST
+Last updated 2017-02-09 13:19:28 CST
 </div>
 </div>
 </body>
