@@ -690,8 +690,27 @@ table.CodeRay td.code>pre{padding:0}
 </ul>
 </li>
 <li><a href="#_优化关联查询">优化关联查询</a></li>
+<li><a href="#_优化子查询">优化子查询</a></li>
+<li><a href="#_优化_code_group_by_code_和_code_distinct_code">优化 <code>GROUP BY</code> 和 <code>DISTINCT</code></a>
+<ul class="sectlevel4">
+<li><a href="#_优化_code_group_by_with_rollup_code">优化 <code>GROUP BY WITH ROLLUP</code></a></li>
 </ul>
 </li>
+<li><a href="#_优化_code_limit_code_分页">优化 <code>LIMIT</code> 分页</a></li>
+<li><a href="#_优化_code_sql_calc_found_rows_code">优化 <code>SQL_CALC_FOUND_ROWS</code></a></li>
+<li><a href="#_优化_code_union_code_查询">优化 <code>UNION</code> 查询</a></li>
+<li><a href="#_静态查询分析">静态查询分析</a></li>
+<li><a href="#_使用用户自定义变量">使用用户自定义变量</a></li>
+</ul>
+</li>
+<li><a href="#_案例学习">案例学习</a>
+<ul class="sectlevel3">
+<li><a href="#_使用_mysql_构建一个队列表">使用 MySQL 构建一个队列表</a></li>
+<li><a href="#_计算两点之间的距离">计算两点之间的距离</a></li>
+<li><a href="#_使用用户定义函数">使用用户定义函数</a></li>
+</ul>
+</li>
+<li><a href="#_总结_3">总结</a></li>
 </ul>
 </li>
 <li><a href="#_mysql_code_explain_code_详解">MySQL <code>explain</code> 详解</a>
@@ -4804,7 +4823,180 @@ LIMIT <span class="integer">1</span>;</code></pre>
 </div>
 <div class="sect3">
 <h4 id="_优化关联查询">优化关联查询</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>确保 <code>ON</code> 或者 <code>USING</code> 子句的列上有索引。一般来说，除非有其他理由，否则只需要在关联顺序中的第二个表的相应列上创建索引。</p>
+</li>
+<li>
+<p>确保任何的 <code>GROUP BY</code> 和 <code>ORDER BY</code> 中的表达式只涉及到一个表中的列，这样 MySQL 才有可能使用索引来优化这个过程。</p>
+</li>
+<li>
+<p>当升级 MySQL 的时候需要注意：关联语法、运算符优先级等其他可能会发生变化的地方。</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化子查询">优化子查询</h4>
+<div class="paragraph">
+<p>子查询优化最重要的优化建议是尽可能使用关联查询代替，至少当前的 MySQL 版本需要这样。</p>
+</div>
+<div class="paragraph">
+<p>使用 MySQL 5.6 或者更新的版本或者 MariaDB，则可以忽略这个建议。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化_code_group_by_code_和_code_distinct_code">优化 <code>GROUP BY</code> 和 <code>DISTINCT</code></h4>
+<div class="paragraph">
+<p>它们都可以使用索引来优化，这也是最有效的优化办法。</p>
+</div>
+<div class="paragraph">
+<p>在 MySQL 中，当无法使用索引的时候， <code>GROUP BY</code> 使用两种策略来完成：使用临时表或者文件排序来分组。</p>
+</div>
+<div class="paragraph">
+<p>如果需要对关联查询做分组，并且是按照查找表中的某个列进行分组，那么通常采用查找表的标识列分组的效果会比其他列更高。例如：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="comment">-- 这个查询效率不会很好</span>
+<span class="class">SELECT</span>
+  actor.first_name,
+  actor.last_name,
+  <span class="predefined">COUNT</span>(*)
+<span class="keyword">FROM</span> film_actor
+  <span class="keyword">INNER</span> <span class="keyword">JOIN</span> actor <span class="keyword">USING</span> (actor_id)
+<span class="keyword">GROUP</span> <span class="keyword">BY</span> actor.first_name, actor.last_name;
 
+<span class="comment">-- 这个查询的效率更高</span>
+<span class="class">SELECT</span>
+  actor.first_name,
+  actor.last_name,
+  <span class="predefined">COUNT</span>(*)
+<span class="keyword">FROM</span> film_actor
+  <span class="keyword">INNER</span> <span class="keyword">JOIN</span> actor <span class="keyword">USING</span> (actor_id)
+<span class="keyword">GROUP</span> <span class="keyword">BY</span> film_actor.actor_id;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>建议始终使用含义明确的语法。</p>
+</div>
+<div class="paragraph">
+<p>如果密钥通过 <code>ORDER BY</code> 子句显式地指定拍序列，当查询使用 <code>GROUP BY</code> 子句的时候，结果集会自动按照分组的字段进行排序。如果不关心结果集的顺序，则可以使用 <code>ORDER BY NULL</code>，让 MySQL 不再进行文件排序。也可以在 <code>GROUP BY</code> 子句中直接使用 <code>DESC</code> 和 <code>ASC</code> 关键字，使分组的结果集按需要的方向排序。</p>
+</div>
+<div class="sect4">
+<h5 id="_优化_code_group_by_with_rollup_code">优化 <code>GROUP BY WITH ROLLUP</code></h5>
+<div class="paragraph">
+<p>分组查询的一个变种就是要求 MySQL 对返回的分组结果再做一次超级聚合。可以使用 <code>WITH ROLLUP</code> 子句来实现，但可能不够优化。</p>
+</div>
+<div class="paragraph">
+<p>最好的办法是尽可能的将 <code>WITH ROLLUP</code> 功能转移到应用程序中处理。</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化_code_limit_code_分页">优化 <code>LIMIT</code> 分页</h4>
+<div class="paragraph">
+<p>一个非常常见又令人头疼的问题就是，在偏移量非常大的时候，查询代价非常高。要优化这种查询，要么是在页面中限制分页的数量，要么是优化大偏移量的性能。</p>
+</div>
+<div class="paragraph">
+<p>优化此类分页查询的一个最简单的办法就是尽可能使用索引覆盖扫描，而不是查询所有的列。然后根据需要做一次关联操作再返回所需要的列。对于偏移量很大的时候，这样做的效率会提升非常大。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="sql"><span class="comment">-- 效率一般</span>
+<span class="class">SELECT</span>
+  film_id,
+  description
+<span class="keyword">FROM</span> film
+<span class="keyword">ORDER</span> <span class="keyword">BY</span> title
+LIMIT <span class="integer">50</span>, <span class="integer">5</span>;
+
+<span class="comment">-- 延迟关联，大大提升查询效率</span>
+<span class="class">SELECT</span>
+  film_id,
+  description
+<span class="keyword">FROM</span> film
+  <span class="keyword">INNER</span> <span class="keyword">JOIN</span> (
+       <span class="class">SELECT</span> film_id
+       <span class="keyword">FROM</span> film
+       <span class="keyword">ORDER</span> <span class="keyword">BY</span> title
+       LIMIT <span class="integer">50</span>, <span class="integer">5</span>
+     ) <span class="keyword">AS</span> lim <span class="keyword">USING</span> (film_id);</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>有时候也可以将 <code>LIMIT</code> 查询转换为已知位置的查询，让 MySQL 通过范围扫描获得到对应的结果。</p>
+</div>
+<div class="paragraph">
+<p><code>LIMIT</code> 和 <code>OFFSET</code> 的问题，其实是 <code>OFFSET</code> 的问题，它会导致 MySQL 扫描大量不需要的行然后在抛弃掉。如果可以使用书签记录上次数据的位置，那么下次就可以直接从该书签记录的位置开始扫描，这样就可以避免使用 <code>OFFSET</code>。</p>
+</div>
+<div class="paragraph">
+<p>其他优化方法还包括使用预先计算的汇总表，或者关联到一个冗余表，冗余表值包含主键列和需要做排序的数据列。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化_code_sql_calc_found_rows_code">优化 <code>SQL_CALC_FOUND_ROWS</code></h4>
+<div class="paragraph">
+<p>分页的时候，另外一个常用的技巧是在 <code>LIMIT</code> 语句中加上 <code>SQL_CALC_FOUND_ROWS</code> 提示，这样就可以获得去掉 <code>LIMIT</code> 以后满足条件的行数，因此可以作为分页的总数。加上该提示，MySQL 都会扫描所有满足条件的行再抛弃不需要的行，代价非常高。</p>
+</div>
+<div class="paragraph">
+<p>一个更好的设计是将具体的页数换成“下一页”按钮，这样只需要下一页的是否有数据，就决定是否显示“下一页”按钮。</p>
+</div>
+<div class="paragraph">
+<p>另外一种做法是先获取并缓存较多的数据，然后每次分页都从这个缓存中获取。</p>
+</div>
+<div class="paragraph">
+<p>有时候也可以考虑使用 <code>EXPLAIN</code> 的结果中的 <code>rows</code> 列的值作为结果集总数的近似值。当需要使用精确值时，再单独使用 <code>COUNT(*)</code> 来满足需求。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_优化_code_union_code_查询">优化 <code>UNION</code> 查询</h4>
+<div class="paragraph">
+<p>MySQL 总是通过创建并填充临时表的方式来执行 <code>UNION</code> 查询。经常需要手动将 <code>WHERE</code>、<code>LIMIT</code>、<code>ORDER BY</code> 等子句下推到 <code>UNION</code> 的各个子查询中，以便优化器可以充分利用这些条件进行优化。</p>
+</div>
+<div class="paragraph">
+<p>除非确实需要服务器消除重复的行，否则就一定要使用 <code>UNION ALL</code>。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_静态查询分析">静态查询分析</h4>
+<div class="paragraph">
+<p>Percona Toolkit 中的 <code>pt-query-advisor</code> 能够解析查询日志、分析查询模式，然后给出所有可能存在潜在问题的查询，并给出足够详细的建议。</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_使用用户自定义变量">使用用户自定义变量</h4>
+<div class="paragraph">
+<p><em>待补充</em></p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_案例学习">案例学习</h3>
+<div class="paragraph">
+<p><em>待补充</em></p>
+</div>
+<div class="sect3">
+<h4 id="_使用_mysql_构建一个队列表">使用 MySQL 构建一个队列表</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_计算两点之间的距离">计算两点之间的距离</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_使用用户定义函数">使用用户定义函数</h4>
+
+</div>
+</div>
+<div class="sect2">
+<h3 id="_总结_3">总结</h3>
+<div class="paragraph">
+<p>要想写一个好的查询，你必须理解 Schema 设计、索引设计等，反之亦然。</p>
+</div>
+<div class="paragraph">
+<p>优化通常都需要三管齐下：不做、少做、快速地做。</p>
 </div>
 </div>
 </div>
@@ -5439,7 +5631,7 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2017-02-09 17:08:43 CST
+Last updated 2017-02-09 18:51:09 CST
 </div>
 </div>
 </body>
