@@ -1,25 +1,38 @@
 = MySQL 学习笔记
 D瓜哥 <http://www.diguage.com/>
 v0.1.0, 2016-12-11
-:doctype:   book
+:doctype: book
 :icons: font
 :source-highlighter: coderay
 :docinfo:
 :toc:
+:sectnums:
 :toclevels: 4
-:listing-caption: Listing
+:preface-title: 前言
+:chapter-label: 章
+:appendix-caption: 附录
+:listing-caption: 代码
+:figure-caption: 图
 :pdf-page-size: A4
+:last-update-label: 最好更新时间
 :homepage: http://www.diguage.com/
 
 
-WARNING: 注意：这个文档绝大部分是参考《高性能 MySQL》写的，可以说是一个读书笔记。书中反复强调，绝大部分内容是针对 MySQL 5.5 书写的，随着 MySQL 的发展，这里的内容很可能已经过时了。所以，文档如果有错误之处，还请以相应版本的官方文档为准！
+[preface]
+== 前言
 
-== 官网及版本库
+=== 官网及版本库
 
 本文档的版本库托管在 Github 上，另外单独发布。
 
 本文档官网:: http://notes.diguage.com/mysql/ 。为了方便阅读，这里展示了处理好的文档。阅读请点击这个网址。
 本文档版本库::  https://github.com/diguage/mysql-notes 。欢迎大家发送 PR。
+
+=== 特别提醒
+
+有个需要特别注意的地方，这里重点提出：**本文档部分的内容可能会过时！**
+
+这个文档绝大部分是参考《高性能 MySQL》写的，可以说就是一个读书笔记。书中反复强调，绝大部分内容是针对 MySQL 5.5 书写的。随着 MySQL 的发展，本文档部分的内容可能会过时。所以，文档如果有错误之处，还请以相应版本的官方文档为准！
 
 // == MySQL 索引结构与查询优化
 include::schema-data-type.adoc[]
@@ -33,7 +46,7 @@ include::explain-in-detail.adoc[]
 include::explain-in-practice.adoc[]
 
 
-
+[appendix]
 == 参考资料
 
 * https://book.douban.com/subject/23008813/[高性能MySQL] -- 很明显，这个文档就是这本书的读书笔记。😆
