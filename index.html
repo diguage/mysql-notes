@@ -5,6 +5,8 @@
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.5">
+<meta name="description" content="MySQL 学习笔记。从数据库表结构设计，深入到索引的数据结构，最后以前面的知识做铺垫，讲解如何使用 explain 做 SQL 的查询优化。">
+<meta name="keywords" content="MySQL, InnoDB, MyISAM, 聚簇索引, 平衡二叉树, 优化, SQL, 数据库">
 <meta name="author" content="D瓜哥">
 <title>MySQL 学习笔记Alpha</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
@@ -517,7 +519,7 @@ table.CodeRay td.code>pre{padding:0}
 <div class="details">
 <span id="author" class="author">D瓜哥</span><br>
 <span id="email" class="email"><a href="http://www.diguage.com/" class="bare">http://www.diguage.com/</a></span><br>
-<span id="revnumber">version 0.1.0,</span>
+<span id="revnumber">v 0.1.0,</span>
 <span id="revdate">2016-12-11</span>
 </div>
 <div id="toc" class="toc2">
@@ -5876,8 +5878,8 @@ possible_keys: <span class="directive">PRIMARY</span>,idx_fk_film_id
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 0.1.0<br>
-最后更新时间 2017-02-17 18:40:54 CST
+V 0.1.0<br>
+最后更新时间 2017-02-17 20:35:37 CST
 </div>
 </div>
 </body>
