@@ -1,4 +1,4 @@
-= MySQL 学习笔记
+= MySQL 学习笔记^Alpha^
 D瓜哥 <http://www.diguage.com/>
 v0.1.0, 2016-12-11
 :doctype: book
