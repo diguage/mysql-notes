@@ -1,4 +1,4 @@
-= MySQL 学习笔记<sup>Alpha</sup>
+= MySQL 学习笔记^Alpha^
 D瓜哥 <http://www.diguage.com/>
 v0.1.0, 2016-12-11
 
@@ -16,13 +16,14 @@ Github 对 Asciidoctor 的支持不是特别完善，另外很多人可能没有
 
 本文档暂时只关注开发人员眼中的 MySQL。所以，内容暂时只覆盖数据库设计、索引及其数据结构和查询优化三块内容。其他内容视情况再做补充。
 
-=== 友情支持
+== 友情支持
 
 如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜
 
-| 支付宝 | 微信 |
-| :----------------------------: | :------------------------: |
-| ![支付宝](./images/alipay.jpeg) | ![微信](./images/wxpay.png) |
+[cols="2*^",frame=none]
+|===
+| image:images/alipay.jpeg[title="支付宝", alt="支付宝", width="60%"] | image:images/wxpay.png[title="微信", alt="微信", width="65%"]
+|===
 
 == 免责声明
 
