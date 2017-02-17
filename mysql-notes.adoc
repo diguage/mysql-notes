@@ -18,6 +18,10 @@ v0.1.0, 2016-12-11
 :last-update-label: 最后更新时间
 :homepage: http://www.diguage.com/
 
+++++
+include::analytics.html[]
+++++
+
 :sectnums!:
 
 [preface]
