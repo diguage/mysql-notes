@@ -15,7 +15,7 @@ v0.1.0, 2016-12-11
 :listing-caption: 代码
 :figure-caption: 图
 :pdf-page-size: A4
-:last-update-label: 最好更新时间
+:last-update-label: 最后更新时间
 :homepage: http://www.diguage.com/
 
 :sectnums!:
