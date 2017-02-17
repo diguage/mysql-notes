@@ -5,7 +5,7 @@ v0.1.0, 2016-12-11
 :icons: font
 :source-highlighter: coderay
 :docinfo:
-:toc:
+:toc: left
 :toc-title: 目录
 :toclevels: 4
 :sectnumlevels: 4
