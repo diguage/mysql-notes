@@ -6,8 +6,9 @@ v0.1.0, 2016-12-11
 :source-highlighter: coderay
 :docinfo:
 :toc:
-:sectnums:
+:toc-title: 目录
 :toclevels: 4
+:sectnumlevels: 4
 :preface-title: 前言
 :chapter-label: 章
 :appendix-caption: 附录
@@ -17,6 +18,7 @@ v0.1.0, 2016-12-11
 :last-update-label: 最好更新时间
 :homepage: http://www.diguage.com/
 
+:sectnums!:
 
 [preface]
 == 前言
@@ -33,6 +35,8 @@ v0.1.0, 2016-12-11
 有个需要特别注意的地方，这里重点提出：**本文档部分的内容可能会过时！**
 
 这个文档绝大部分是参考《高性能 MySQL》写的，可以说就是一个读书笔记。书中反复强调，绝大部分内容是针对 MySQL 5.5 书写的。随着 MySQL 的发展，本文档部分的内容可能会过时。所以，文档如果有错误之处，还请以相应版本的官方文档为准！
+
+:sectnums:
 
 // == MySQL 索引结构与查询优化
 include::schema-data-type.adoc[]
@@ -63,3 +67,12 @@ include::explain-in-practice.adoc[]
 * http://wdxtub.com/vault/csapp-10.html[深入理解计算机系统 第 10 课 Memory Hierarchy]
 * http://www.daenotes.com/electronics/digital-electronics/magnetic-bubble-memories[Magnetic Bubble Memories]
 * https://www.cs.uic.edu/~jbell/CourseNotes/OperatingSystems/10_MassStorage.html[Operating Systems: Mass-Storage Structure]
+
+[appendix]
+== 版权声明
+
+++++
+<pre>
+include::LICENSE[]
+</pre>
+++++
