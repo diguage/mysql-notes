@@ -9,8 +9,8 @@ then
     gsed=`which gsed`
 fi
 
-rm -rf $style_file_name
-touch  $style_file_name
+# rm -rf $style_file_name
+# touch  $style_file_name
 
 ## 声明一个数字变量，可以带引号
 declare -a start_lines=(`awk '/<style>/{print NR}' $html_file_name`)
@@ -22,7 +22,8 @@ arraylength=${#start_lines[@]}
 # 遍历数组，获取下标以及各个元素
 for (( i=0; i<${arraylength}; i++ ));
 do
-  cat $html_file_name | head -n ${end_lines[$i]} | tail -n +${start_lines[$i]} | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
+  $gsed -n "${start_lines[$i]}, ${end_lines[$i]}p" $html_file_name | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
+  # cat $html_file_name | head -n ${end_lines[$i]} | tail -n +${start_lines[$i]} | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
 done
 
 # 遍历数组，获取下标以及各个元素
