@@ -23,6 +23,15 @@ v0.1.0, 2016-12-11
 [preface]
 == 前言
 
+=== 友情支持
+
+如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😆
+
+[cols="2*^",frame=none]
+|===
+| image:images/alipay.jpeg[title="支付宝", alt="支付宝", width="60%"] | image:images/wxpay.png[title="微信", alt="微信", width="65%"]
+|===
+
 === 官网及版本库
 
 本文档的版本库托管在 Github 上，另外单独发布。
