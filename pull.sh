@@ -34,6 +34,7 @@ mkdir $temp_folder
 
 mv $html_file_name $temp_folder
 cp -R ./images $temp_folder
+cp html-minifier.config.json $temp_folder
 
 git checkout deploy
 
