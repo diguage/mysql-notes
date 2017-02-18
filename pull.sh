@@ -79,6 +79,8 @@ $gsed -i "s/https:\/\/fonts.googleapis.com/http:\/\/fonts.proxy.ustclug.org/" $h
 
 $htmlminifier -c html-minifier.config.json $html_file_name -o index.html
 
+rm -rf $html_file_name
+
 git add .
 
 git commit -am "ready to deploy"
