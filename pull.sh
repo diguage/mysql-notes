@@ -7,7 +7,14 @@ style_file_name=styles.css
 gsed=`which sed`
 if [[ `uname` == Darwin* ]]
 then
-    gsed=`which gsed`
+  gsed=`which gsed`
+fi
+
+# 确保 cssnano 命令被安装
+cssnano=`which cssnano`
+if [ ! -n `which cssnano` ]; then
+  npm install cssnano-cli --global
+  cssnano=`which cssnano`
 fi
 
 git push origin master
@@ -44,11 +51,14 @@ do
   # cat $html_file_name | head -n ${end_lines[$i]} | tail -n +${start_lines[$i]} | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
 done
 
-# 遍历数组，获取下标以及各个元素
+# 遍历数组，删除样式
 for (( i=${arraylength}-1; i>=0; i-- ));
 do
   $gsed -i "${start_lines[$i]}, ${end_lines[$i]}d" $html_file_name
 done
+
+# 压缩 CSS
+$cssnano $style_file_name $style_file_name
 
 # 将样式文件添加到 HTML 中
 $gsed -i "s/\(<\/head>\)/<link rel=\"stylesheet\" href=\".\/${style_file_name}\">\n\1/" $html_file_name
