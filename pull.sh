@@ -1,6 +1,6 @@
 #!/bin/bash
 
-html_file_name=index.html
+html_file_name=mysql-notes.html
 style_file_name=styles.css
 
 # 解决 Mac 与 Linux 中 sed 处理不统一的问题
@@ -13,8 +13,15 @@ fi
 # 确保 cssnano 命令被安装
 cssnano=`which cssnano`
 if [ ! -n `which cssnano` ]; then
-  npm install cssnano-cli --global
+  npm install cssnano-cli --g --registry=https://registry.npm.taobao.org
   cssnano=`which cssnano`
+fi
+
+# 确保 html-minifier 命令被安装
+html-minifier=`which html-minifier`
+if [ ! -n `which html-minifier` ]; then
+  npm install html-minifier -g --registry=https://registry.npm.taobao.org
+  html-minifier=`which html-minifier`
 fi
 
 git push origin master
@@ -68,6 +75,8 @@ $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/
 
 # 替换 Google Fonts
 $gsed -i "s/https:\/\/fonts.googleapis.com/http:\/\/fonts.proxy.ustclug.org/" $html_file_name
+
+$html-minifier -c html-minifier.config.json $html_file_name -o index.html
 
 git add .
 
