@@ -1108,7 +1108,162 @@ Percona Toolkit 中的 `pt-query-advisor` 能够解析查询日志、分析查�
 
 ==== 使用用户自定义变量
 
-_待补充_
+用户自定义变量是一个用来存储内容的临时容器，在连接 MySQL 的整个过程中都存在。
+
+不能使用用户自定义变量的场景：
+
+* 使用自定义变量的查询，无法使用查询缓存。
+* 不能再使用常量或者标识符的地方使用自定义变量，例如表名等。
+* 用户自定义变量的生命周期是在一个连接中有效，所以不能用它们来做连接间的通信。
+* 如果使用连接池或者持久化连接，自定义变量可能让看起来毫无关系的代码发生交互。
+* 在 5.0 之前的版本，是大小写敏感的。
+* 不能显式地声明自定义变量的类型。
+* MySQL 优化器在某些场景下可能会将这些变量优化掉。
+* 赋值的顺序和赋值的时间点并不总是固定的，这依赖于优化器的决定。
+* 赋值符号 `:=` 的优先级非常低。
+* 使用未定义变量不会产生任何语法错误。
+
+===== 优化排名语句
+
+使用用户自定义变量的一个重要特性是可以在给一个变量赋值的同时使用这个变量。
+
+.使用变量显示行号
+[source,sql]
+----
+SET @rownum := 0;
+SELECT
+  actor_id,
+  @rownum := @rownum + 1 AS rownum
+FROM actor
+LIMIT 3;
+----
+
+.使用变量排序，相同数量排名也相同
+[source,sql]
+----
+SET @curr_cnt := 0, @prev_cnt := 0, @rank := 0;
+
+SELECT
+  actor_id,
+  @curr_cnt := cnt                                          AS cnt,
+  @rank     := if(@prev_cnt <> @curr_cnt, @rank + 1, @rank) AS rank,
+  @prev_cnt := @curr_cnt                                    AS dummy
+FROM (
+   SELECT
+     actor_id,
+     COUNT(*) AS cnt
+   FROM film_actor
+   GROUP BY actor_id
+   ORDER BY cnt DESC
+   LIMIT 10
+) AS der;
+----
+
+===== 避免重复查询刚刚更新的数据
+
+[source,sql]
+----
+-- 根据上下文推断的建表语句
+DROP TABLE IF EXISTS tbl;
+CREATE TABLE tbl (
+  id          INTEGER AUTO_INCREMENT PRIMARY KEY,
+  lastupdated TIMESTAMP
+);
+
+-- 常规做法
+UPDATE tbl SET tbl.lastupdated = NOW() WHERE id = 1;
+SELECT lastupdated FROM tbl WHERE id = 1;
+
+-- 使用变量，无须访问数据表，更高效
+UPDATE tbl SET tbl.lastupdated = NOW() WHERE id = 1 AND @now := NOW();
+SELECT @now;
+----
+
+===== 确定取值的顺序
+
+使用用户自定义变量的一个最常见的问题是没有注意到在赋值和读取变量的时候可能是在查询的不同阶段。例如，在 `SELECT` 中定义，在 `WHERE` 中使用。
+
+解决这个问题的办法是让变量的赋值和取值发生在执行查询的同一阶段。
+
+[source,sql]
+----
+SET @rownum := 0;
+SELECT
+  actor_id,
+  @rownum AS rownum
+FROM actor
+WHERE (@rownum := @rownum + 1) <= 1;
+----
+
+一个技巧：将赋值语句放到 `LEAST()` 函数中，这样就可以在完全不改变顺序的时候完成赋值操作。
+
+[source,sql]
+----
+SET @rownum := 0;
+SELECT
+  actor_id,
+  first_name,
+  @rownum AS rownum
+FROM actor
+WHERE @rownum <= 1
+ORDER BY first_name, LEAST(0, @rownum := @rownum + 1);
+----
+
+===== 编写偷懒的 `UNION`
+
+将用户分为热门用户和归档用不。查询用户时，热门用户中查不出来才去查归档用户，避免不必要的 `UNION` 子查询。
+
+[source,sql]
+----
+-- 建表语句是根据上下文推断的
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY
+);
+DROP TABLE IF EXISTS users_archived;
+CREATE TABLE users_archived (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY
+);
+
+-- 查询用户，热门用户中查不出来则查归档用户
+SELECT
+  greatest(@found := -1, id) AS id,
+  'users'                    AS which_tbl
+FROM users
+WHERE id = 1
+
+UNION ALL
+
+SELECT
+  id,
+  'users_archived' AS which_tbl
+FROM users_archived
+WHERE id = 1 AND @found IS NULL
+
+UNION ALL
+-- 将变量充值，避免影响下次查询
+SELECT
+  1,
+  'reset'
+FROM dual
+WHERE (@found := NULL) IS NOT NULL;
+----
+
+===== 用户自定义变量的其他用处
+
+在任何类型的 SQL 语句中都可以对变量进行赋值。
+
+一些典型的使用场景：
+
+* 查询运行时计算总数和平均值。
+* 模拟 `GROUP` 语句中的函数 `FIRST()` 和 `LAST()`。
+* 对大量数据做一些数据计算。
+* 计算一个大表的 MD5 散列值。
+* 编写一个样本处理函数，当样本中的数值超过某个边界值的时候将其变成0。
+* 模拟读/写游标。
+* 在 `SHOW` 语句的 `WHERE` 子句中加入变量值。
+
+推荐阅读 https://book.douban.com/subject/26665768/[SQL and Relational Theory]，改变对 SQL 语句的认识。
 
 === 案例学习
 
