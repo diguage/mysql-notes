@@ -18,10 +18,10 @@ if [ ! -n `which cssnano` ]; then
 fi
 
 # 确保 html-minifier 命令被安装
-html-minifier=`which html-minifier`
+htmlminifier=`which html-minifier`
 if [ ! -n `which html-minifier` ]; then
   npm install html-minifier -g --registry=https://registry.npm.taobao.org
-  html-minifier=`which html-minifier`
+  htmlminifier=`which html-minifier`
 fi
 
 git push origin master
@@ -76,7 +76,7 @@ $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/
 # 替换 Google Fonts
 $gsed -i "s/https:\/\/fonts.googleapis.com/http:\/\/fonts.proxy.ustclug.org/" $html_file_name
 
-$html-minifier -c html-minifier.config.json $html_file_name -o index.html
+$htmlminifier -c html-minifier.config.json $html_file_name -o index.html
 
 git add .
 
