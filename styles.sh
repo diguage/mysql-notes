@@ -1,6 +1,20 @@
 #!/bin/bash
 
 html_file_name=mysql-notes.html
+out_file_name=mysql-notes.html
+
+while getopts "i:o:" arg #选项后面的冒号表示该选项需要参数
+do
+    case $arg in
+        i)
+        html_file_name=$OPTARG
+			;;
+        o)
+        out_file_name=$OPTARG
+			;;
+    esac
+done
+
 style_file_name=styles.css
 
 gsed=`which sed`

@@ -27,37 +27,10 @@ include::analytics.html[]
 
 :sectnums!:
 
-[preface]
-== 前言
-
-*本笔记还没有完成，现在还处于 Alpha 版，后续还会持续更新。*
-
-=== 友情支持
-
-如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜
-
-[cols="2*^",frame=none]
-|===
-| image:images/alipay.jpeg[title="支付宝", alt="支付宝", width="60%"] | image:images/wxpay.png[title="微信", alt="微信", width="65%"]
-|===
-
-=== 官网及版本库
-
-本文档的版本库托管在 Github 上，另外单独发布。
-
-“地瓜哥”博客网:: http://www.diguage.com/ 。D瓜哥的个人博客。欢迎光临，不过，内容很杂乱，请见谅。不见谅，你来打我啊，😂😂
-本文档官网:: http://notes.diguage.com/mysql/ 。为了方便阅读，这里展示了处理好的文档。阅读请点击这个网址。
-本文档版本库::  https://github.com/diguage/mysql-notes 。欢迎大家发送 PR。
-
-=== 特别提醒
-
-有个需要特别注意的地方，这里重点提出：**本文档部分的内容可能会过时！**
-
-这个文档绝大部分是参考《高性能 MySQL》写的，可以说就是一个读书笔记。书中反复强调，绝大部分内容是针对 MySQL 5.5 书写的。随着 MySQL 的发展，本文档部分的内容可能会过时。所以，文档如果有错误之处，还请以相应版本的官方文档为准！
+include::preface.adoc[]
 
 :sectnums:
 
-// == MySQL 索引结构与查询优化
 include::schema-data-type.adoc[]
 
 include::high-performance-index.adoc[]
@@ -68,30 +41,6 @@ include::explain-in-detail.adoc[]
 
 include::explain-in-practice.adoc[]
 
+include::references.adoc[]
 
-[appendix]
-== 参考资料
-
-* https://book.douban.com/subject/23008813/[高性能MySQL] -- 很明显，这个文档就是这本书的读书笔记。😆
-* https://book.douban.com/subject/24708143/[MySQL技术内幕] -- 和上面的那本参考看更爽。
-* https://book.douban.com/subject/26419771/[数据库索引设计与优化] -- 第一本书引用了这本书，去年刚刚翻译过来，评分比第一本都高，9.4，惊为神作，不可不读。
-* http://blog.jobbole.com/100349/[如果有人问你数据库的原理，叫他看这篇文章]
-* http://blog.codinglabs.org/articles/theory-of-mysql-index.html[MySQL索引背后的数据结构及算法原理]
-* http://bluehawk.monmouth.edu/rclayton/web-pages/s10-305-503/treaps.html[Treaps: CS 305 & 503 Lecture notes]
-* http://www.csie.ntnu.edu.tw/~u91029/Order.html[演算法筆記 - Order]
-* http://blog.csdn.net/tianxueer/article/details/2689117[硬盘内部硬件结构和工作原理详解]
-* http://elf8848.iteye.com/blog/1731274[磁盘性能指标--IOPS 理论]
-* http://harrywu304.blog.163.com/blog/static/845660320101024111941414/[硬件性能解析(1)-存储金字塔]
-* http://www.cnblogs.com/zuoxiaolong/p/computer3.html[深入理解计算机系统（1.3）---金字塔形的存储设备、操作系统的抽象概念]
-* http://wdxtub.com/vault/csapp-10.html[深入理解计算机系统 第 10 课 Memory Hierarchy]
-* http://www.daenotes.com/electronics/digital-electronics/magnetic-bubble-memories[Magnetic Bubble Memories]
-* https://www.cs.uic.edu/~jbell/CourseNotes/OperatingSystems/10_MassStorage.html[Operating Systems: Mass-Storage Structure]
-
-[appendix]
-== 版权声明
-
-++++
-<pre>
-include::LICENSE[]
-</pre>
-++++
+include::license.adoc[]
