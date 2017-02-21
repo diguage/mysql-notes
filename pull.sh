@@ -33,6 +33,7 @@ temp_folder="/tmp/mysql-notes-`date  "+%Y%m%d%H%M%S"`"
 mkdir $temp_folder
 
 mv $html_file_name $temp_folder
+mv ./styles $temp_folder
 cp -R ./images $temp_folder
 cp html-minifier.config.json $temp_folder
 
@@ -42,34 +43,15 @@ rm -rf *
 
 mv $temp_folder/* .
 
-rm -rf $style_file_name
-touch  $style_file_name
+cd ./styles
 
-## 声明一个数字变量，可以带引号
-declare -a start_lines=(`awk '/<style>/{print NR}' $html_file_name`)
-declare -a end_lines=(`awk '/<\/style>/{print NR}' $html_file_name`)
-
-# 获取数组长度
-arraylength=${#start_lines[@]}
-
-# 遍历数组，获取下标以及各个元素
-for (( i=0; i<${arraylength}; i++ ));
+for f in `ls .`
 do
-  $gsed -n "${start_lines[$i]}, ${end_lines[$i]}p" $html_file_name | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
-  # cat $html_file_name | head -n ${end_lines[$i]} | tail -n +${start_lines[$i]} | grep -v "style>" | grep -v "/\*" 1>> $style_file_name
+  # 压缩 CSS
+  $cssnano $f $f
 done
 
-# 遍历数组，删除样式
-for (( i=${arraylength}-1; i>=0; i-- ));
-do
-  $gsed -i "${start_lines[$i]}, ${end_lines[$i]}d" $html_file_name
-done
-
-# 压缩 CSS
-$cssnano $style_file_name $style_file_name
-
-# 将样式文件添加到 HTML 中
-$gsed -i "s/\(<\/head>\)/<link rel=\"stylesheet\" href=\".\/${style_file_name}\">\n\1/" $html_file_name
+cd ..
 
 # 替换 Font Awesome
 $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/" $html_file_name

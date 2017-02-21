@@ -1,9 +1,11 @@
 = MySQL 学习笔记^Alpha^
 D瓜哥 <http://www.diguage.com/>
-v0.1.0, 2016-12-11
+v0.1.0, 2016-12-11: Alpha
 :doctype: book
 :icons: font
 :source-highlighter: coderay
+:stylesdir: styles/
+:linkcss:
 :docinfo:
 :toc: left
 :toc-title: 目录
