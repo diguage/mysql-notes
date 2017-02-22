@@ -53,11 +53,11 @@ done
 
 cd ..
 
-# 替换 Font Awesome
-$gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/" $html_file_name
+# 替换 Font Awesome，使用内置功能，不需要手动搞了。
+# $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/" $html_file_name
 
 # 替换 Google Fonts
-$gsed -i "s/https:\/\/fonts.googleapis.com/http:\/\/fonts.proxy.ustclug.org/" $html_file_name
+$gsed -i "s/https:\/\/fonts.googleapis.com/\/\/fonts.proxy.ustclug.org/" $html_file_name
 
 $htmlminifier -c html-minifier.config.json $html_file_name -o index.html
 
