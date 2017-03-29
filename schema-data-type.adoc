@@ -303,7 +303,7 @@ SELECT SUM(cnt) FROM hit_counter;
 
 一个常见需要时每个一段时间开始一个新的计算器（例如，每天一个）。
 
-[source,sql]
+[source,sql,linenums]
 ----
 DROP TABLE IF EXISTS daily_hit_counter;
 CREATE TABLE daily_hit_counter (
