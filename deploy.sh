@@ -69,7 +69,7 @@ git commit -am "ready to deploy"
 
 git push origin deploy
 
-rsync -avz . deployer@120.92.74.139:/home/deployer/diguage.com/notes/mysql
+rsync -avz --exclude=".*" .  deployer@120.92.74.139:/home/deployer/diguage.com/notes/mysql
 
 rm -rf $temp_folder
 
