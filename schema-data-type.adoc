@@ -63,6 +63,33 @@ TIP: 例外：MySQL表使用 `ROW_FORMAT=FIXED` 创建的话，每一行都会�
 +
 WARNING: 每页最多能存多少数据？ 2^8^ = 256， 2^16^ = 65536。数据能否超过65536？如果不能，超过了会怎么样？-- MySQL 中 `VARCHAR` 类型的最大长度限制为 65535。
 +
+上面只是计算出来的结果，我们使用建表语句测试 `VARCHAR` 类型的最大长度限制。
++
+[source,sql]
+----
+CREATE TABLE varchar_test
+(
+  id            INT PRIMARY KEY AUTO_INCREMENT,
+  varchar_field VARCHAR(65535)  DEFAULT ''
+);
+----
++
+执行，结果报错：
++
+[source,sql]
+----
+Column length too big for column 'varchar_field' (max = 21845); use BLOB or TEXT instead
+----
++
+但是，如果把字段长度改为 `21845`，然后结果就成这样了：
++
+[source,sql]
+----
+Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs
+----
++
+*`VARCHAR` 类型的最大长度限制到底是多少呢？*
++
 InnoDB 更灵活，可以把过长的 `VARCHAR` 存储为 `BLOB`。
 +
 WARNING: 变化的阈值是多少？
