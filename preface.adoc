@@ -9,7 +9,7 @@
 
 [cols="2*^",frame=none]
 |===
-| image:images/alipay.jpeg[title="支付宝", alt="支付宝", width="60%"] | image:images/wxpay.png[title="微信", alt="微信", width="65%"]
+| image:images/alipay.jpeg[title="支付宝", alt="支付宝", width="40%"] | image:images/wxpay.png[title="微信", alt="微信", width="45%"]
 |===
 
 === 官网及版本库
