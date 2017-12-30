@@ -1,6 +1,6 @@
 = MySQL 学习笔记^Alpha^
 D瓜哥 <http://www.diguage.com/>
-v0.1.0, 2016-12-11: Alpha
+{docdate}
 :doctype: book
 :icons: font
 :iconfont-cdn: //cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css
