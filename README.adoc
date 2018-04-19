@@ -1,12 +1,12 @@
 = MySQL 学习笔记^Alpha^
-D瓜哥 <http://www.diguage.com/>
+D瓜哥 <https://www.diguage.com/>
 v0.1.0, 2016-12-11
 
 D瓜哥的 MySQL 学习笔记。
 
 Github 对 Asciidoctor 的支持不是特别完善，另外很多人可能没有处理 Asciidoc 的工具。所以，D瓜哥把该文档处理后发布出来了。查看该文档内容请看下面官网。
 
-*该笔记官网： http://notes.diguage.com/mysql/ 。*
+*该笔记官网： https://notes.diguage.com/mysql/ 。*
 
 该笔记尚未完成，后续还会持续增加新内容。敬请关注！
 
