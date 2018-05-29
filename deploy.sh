@@ -1,7 +1,27 @@
 #!/bin/bash
+#
+# 构建脚本
 
-html_file_name=mysql-notes.html
-style_file_name=styles.css
+base_dir=`pwd`
+origin_file_name=mysql-notes
+adoc_file_name=${origin_file_name}.adoc
+origin_html_file_name=${origin_file_name}.html
+web_html_file_name=index.html
+style_dir=styles
+
+# 确保 asciidoctor 命令被安装
+asciidoctor=`which asciidoctor`
+if [ ! -n `which asciidoctor` ]; then
+  gem install asciidoctor
+  asciidoctor=`which asciidoctor`
+fi
+
+# 确保 wkhtmltopdf 命令被安装
+wkhtmltopdf=`which wkhtmltopdf`
+if [ ! -n `which wkhtmltopdf` ]; then
+  brew cask install wkhtmltopdf
+  wkhtmltopdf=`which wkhtmltopdf`
+fi
 
 # 解决 Mac 与 Linux 中 sed 处理不统一的问题
 gsed=`which sed`
@@ -24,26 +44,14 @@ if [ ! -n `which html-minifier` ]; then
   htmlminifier=`which html-minifier`
 fi
 
-git push origin master
+rm -rf *.html *.pdf $style_dir
 
-asciidoctor mysql-notes.adoc -o $html_file_name
+## Web ###########
 
-temp_folder="/tmp/mysql-notes-`date  "+%Y%m%d%H%M%S"`"
+# Web
+$asciidoctor -a toc=left -a stylesdir=$style_dir -a linkcss $adoc_file_name -o $origin_html_file_name
 
-mkdir $temp_folder
-
-mv $html_file_name $temp_folder
-mv ./styles $temp_folder
-cp -R ./images $temp_folder
-cp html-minifier.config.json $temp_folder
-
-git checkout deploy
-
-rm -rf *
-
-mv $temp_folder/* .
-
-cd ./styles
+cd ./$style_dir
 
 for f in `ls .`
 do
@@ -51,26 +59,16 @@ do
   $cssnano $f $f
 done
 
-cd ..
+cd $base_dir
 
-# 替换 Font Awesome，使用内置功能，不需要手动搞了。
-# $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/http:\/\/cdn.bootcss.com/" $html_file_name
+# 调整样式
+$gsed -i "s/<\/head>/<style>a{text-decoration:none;}.img_bk{text-align:center;}<\/style><\/head>/" $origin_html_file_name
 
+# 替换 Font Awesome，(内置功能不能保证版本一致)
+$gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/\/\/cdn.bootcss.com/" $origin_html_file_name
 # 替换 Google Fonts
-$gsed -i "s/https:\/\/fonts.googleapis.com/\/\/fonts.proxy.ustclug.org/" $html_file_name
+$gsed -i "s/https:\/\/fonts.googleapis.com/\/\/fonts.proxy.ustclug.org/" $origin_html_file_name
 
-$htmlminifier -c html-minifier.config.json $html_file_name -o index.html
+$htmlminifier -c html-minifier.config.json $origin_html_file_name -o $web_html_file_name
 
-rm -rf $html_file_name
-
-git add .
-
-git commit -am "ready to deploy"
-
-git push origin deploy
-
-rsync -avz --exclude=".*" .  deployer@notes.diguage.com:/home/deployer/diguage.com/notes/mysql
-
-rm -rf $temp_folder
-
-git checkout master
+rsync -avz --exclude=".*" ./images ./$web_html_file_name $style_dir deployer@notes.diguage.com:/home/deployer/diguage.com/notes/mysql
