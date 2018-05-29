@@ -65,7 +65,7 @@ https://book.douban.com/subject/26419771/[数据库索引设计与优化] 一书
 
 如果查询没有办法找到合适的访问类型，那么解决的最好办法通常就是增加一个合适的索引。索引让 MySQL 以最高效、扫描行数最少的方式找到需要的记录。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 USE sakila;
 
@@ -244,7 +244,7 @@ Sending data::: 这表示多种情况：线程可能在多个状态之间传送�
 
 MySQL 使用基于成本的优化器，它将尝试预测一个查询使用某种执行计划时的成本，并选择其中成本最小的一个。可以通过查询当前会话的 `Last_query_cost` 的值来得知 MySQL 计算的当前查询的成本。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT SQL_NO_CACHE count(*)
 FROM film_actor;
@@ -286,7 +286,7 @@ MySQL 可以使用一些等价变换来简化并规范表达式。可以科比�
 +
 让人惊讶的是，在优化阶段，有时候甚至一个查询也能够转化为一个常数。例如：在索引列上执行 `MIN()`；甚至主键或者唯一键查找语句。
 +
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT
@@ -335,7 +335,7 @@ MySQL 在某些情况下可以将子查询转换成一种效率更高的形式�
 提前终止查询::
 在发现已经满足查询需求的时候，MySQL 总是能够立刻终止查询。例如：`LIMIT` 子句；再例如，发现一个不成立的条件。
 +
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT film_id
@@ -379,7 +379,7 @@ MySQL 认为任何一个查询都是一次“关联” -- 并不仅仅是一个�
 
 MySQL 关联执行的策略：MySQL 对任何关联都执行嵌套循环关联操作，即 MySQL 先在一个表中循环取出单条数据，然后再嵌套循环到下一个表中寻找匹配的行，依次下去，知道找到所有表中匹配的行位置。然后根据各个表匹配的行，返回查询中需要的各个列。MySQL 会尝试在最后一个关联表中找到所有匹配的行，如果最后一个关联表无法找到更多的行以后，MySQL 返回到上一层次关联表，看是否能够找到更多的匹配记录，以此类推迭代执行。可以使用如下代码来解释：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 内关联查询 ----------------------------------------------------
 SELECT
@@ -447,7 +447,7 @@ MySQL 生成查询的一棵指令树，然后通过存储引擎执行完成这�
 
 MySQL 优化器最重要的一部分就是关联查询优化，它决定了多个表关联时的顺序。关联查询优化器通过评估不同关联顺序时的成本来选择一个代价最小的关联顺序。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT
@@ -505,7 +505,7 @@ possible_keys: PRIMARY
 
 从这个执行计划就能能看出这个查询是从 `actor` 开始查询的。对比一下：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT STRAIGHT_JOIN
@@ -625,7 +625,7 @@ MySQL 的万能“嵌套循环”并不是对每种查询都是最优的。MySQL
 
 MySQL 的子查询实现得非常糟糕。最糟糕的一类查询是 `WHERE` 条件中包含 `IN()` 的子查询语句。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 原始写法
 SELECT *
@@ -658,7 +658,7 @@ TIP: 在 MySQL 5.7 中，上面第一种 SQL 存在的问题已经得到解决�
 
 并不是所有关联子查询的性能都会很差。先测试，然后做出自己的判断。很多时候，关联子查询是一种非常合理、自然，甚至是性能最好的写法。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT
@@ -770,7 +770,7 @@ MySQL 并不支持松散索引扫描。通常，MySQL 的索引扫描需要先�
 
 MySQL 5.0 之后的版本，在某些特殊的场景下是可以使用松散索引扫描的，例如，在一个分组查询中需要找到分组的最大值和最小值：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN
 SELECT
@@ -804,7 +804,7 @@ possible_keys: PRIMARY,idx_fk_film_id
 
 对于 `MIN()` 和 `MAX()` 查询，MySQL 的优化做得并不好。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT MIN(actor_id)
 FROM actor
@@ -815,7 +815,7 @@ WHERE first_name = 'PENELOPE';
 
 一个曲线的优化方法是移除 `MIN()`，然后使用 `LIMIT` 来重写查询：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT actor_id
 FROM actor
@@ -834,7 +834,7 @@ LIMIT 1;
 
 MySQL 不允许对同一张表同时进行查询和更新。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 书上没有给表的定义，根据上下文 SQL 自行添加
 DROP TABLE IF EXISTS tbl;
@@ -945,7 +945,7 @@ optimizer_switch::
 
 ===== 简单的优化
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 书中没有建表语句，根据上下文 SQL 创建
 DROP TABLE IF EXISTS city;
@@ -968,7 +968,7 @@ WHERE id <= 5;
 
 在同一个查询中统计同一列的不同值的数量，以减少查询的语句量。可以这样：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS items;
 CREATE TABLE items (
@@ -1020,7 +1020,7 @@ FROM items;
 
 如果需要对关联查询做分组，并且是按照查找表中的某个列进行分组，那么通常采用查找表的标识列分组的效果会比其他列更高。例如：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 这个查询效率不会很好
 SELECT
@@ -1057,7 +1057,7 @@ GROUP BY film_actor.actor_id;
 
 优化此类分页查询的一个最简单的办法就是尽可能使用索引覆盖扫描，而不是查询所有的列。然后根据需要做一次关联操作再返回所需要的列。对于偏移量很大的时候，这样做的效率会提升非常大。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 效率一般
 SELECT
@@ -1128,7 +1128,7 @@ Percona Toolkit 中的 `pt-query-advisor` 能够解析查询日志、分析查�
 使用用户自定义变量的一个重要特性是可以在给一个变量赋值的同时使用这个变量。
 
 .使用变量显示行号
-[source,sql]
+[{sql_source_attr}]
 ----
 SET @rownum := 0;
 SELECT
@@ -1139,7 +1139,7 @@ LIMIT 3;
 ----
 
 .使用变量排序，相同数量排名也相同
-[source,sql]
+[{sql_source_attr}]
 ----
 SET @curr_cnt := 0, @prev_cnt := 0, @rank := 0;
 
@@ -1161,7 +1161,7 @@ FROM (
 
 ===== 避免重复查询刚刚更新的数据
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 根据上下文推断的建表语句
 DROP TABLE IF EXISTS tbl;
@@ -1185,7 +1185,7 @@ SELECT @now;
 
 解决这个问题的办法是让变量的赋值和取值发生在执行查询的同一阶段。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SET @rownum := 0;
 SELECT
@@ -1197,7 +1197,7 @@ WHERE (@rownum := @rownum + 1) <= 1;
 
 一个技巧：将赋值语句放到 `LEAST()` 函数中，这样就可以在完全不改变顺序的时候完成赋值操作。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SET @rownum := 0;
 SELECT
@@ -1213,7 +1213,7 @@ ORDER BY first_name, LEAST(0, @rownum := @rownum + 1);
 
 将用户分为热门用户和归档用不。查询用户时，热门用户中查不出来才去查归档用户，避免不必要的 `UNION` 子查询。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 建表语句是根据上下文推断的
 DROP TABLE IF EXISTS users;

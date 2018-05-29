@@ -76,27 +76,27 @@
 ... `Zero limit`
 
 
-[source,sql]
+[{sql_source_attr}]
 ----
 
 ----
 
-[source,sql]
+[{sql_source_attr}]
 ----
 
 ----
 
-[source,sql]
+[{sql_source_attr}]
 ----
 
 ----
 
-[source,sql]
+[{sql_source_attr}]
 ----
 
 ----
 
-[source,sql]
+[{sql_source_attr}]
 ----
 
 ----
@@ -105,7 +105,7 @@
 
 `DESCRIBE` 和 `EXPLAIN` 是同义词。在实践中，`DESCRIBE` 多用于显示表结构，而 `EXPLAIN` 多用于显示 SQL 语句的执行计划。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 {EXPLAIN | DESCRIBE | DESC}
     tbl_name [col_name | wild]
@@ -134,7 +134,7 @@ explainable_stmt: {
 }
 ----
 
-[source,sql]
+[{sql_source_attr}]
 ----
 EXPLAIN FORMAT = JSON SELECT DISTINCT (m.user_id)
 FROM user_extdata m

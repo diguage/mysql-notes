@@ -31,7 +31,7 @@ CPU 直接支持原生浮点计算，所以浮点运算明显更快。
 MySQL 5.0 和更高版本中的 `DECIMAL` 类型运行最多 65 个数字。
 
 .测试 `DECIMAL` 类型的最大数字数
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS decimal_test;
 CREATE TABLE decimal_test (
@@ -65,7 +65,7 @@ WARNING: 每页最多能存多少数据？ 2^8^ = 256， 2^16^ = 65536。数据�
 +
 上面只是计算出来的结果，我们使用建表语句测试 `VARCHAR` 类型的最大长度限制。
 +
-[source,sql]
+[{sql_source_attr}]
 ----
 CREATE TABLE varchar_test
 (
@@ -76,14 +76,14 @@ CREATE TABLE varchar_test
 +
 执行，结果报错：
 +
-[source,sql]
+[{sql_source_attr}]
 ----
 Column length too big for column 'varchar_field' (max = 21845); use BLOB or TEXT instead
 ----
 +
 但是，如果把字段长度改为 `21845`，然后结果就成这样了：
 +
-[source,sql]
+[{sql_source_attr}]
 ----
 Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs
 ----
@@ -100,7 +100,7 @@ WARNING: 变化的阈值是多少？
 * 非常短的列， `CHAR` 比 `VARCHAR` 在存储空间上更有效率。
 
 .测试数据两端的空格保留情况
-[source,sql]
+[{sql_source_attr}]
 ----
 # 测试 CHAR
 DROP TABLE IF EXISTS char_test;
@@ -150,7 +150,7 @@ MySQL 不能将 `BLOB` 和 `TEXT` 列全部长度的字符串进行索引。
 枚举列可以把一些不重复的字符串存储成一个预定义的集合。MySQL 在存储枚举时非常紧凑，会根据列表值的数量压缩到一个或者两个字节中。MySQL 在内部会将每个值在列表中的位置保存为整数，并且在表的 _.frm_ 文件中保存 “数字-字符串” 映射关系的 “查找表”。
 
 .测试枚举的存储值
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS enum_test;
 CREATE TABLE enum_test (e ENUM ('fish', 'apple', 'dog'));
@@ -292,7 +292,7 @@ TIP: 全文检索还是使用专门的工具，比如 ElasticSearch 更好。
 
 当重建汇总表和缓存表时，使用“影子表”来保证数据在操作时依然可用。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS my_summary_new, my_summary_old;
 
@@ -315,7 +315,7 @@ Justin Swanhart 的开源工具 Flexviews， https://github.com/greenlion/swanha
 
 可以利用 `CurrentHashMap` 分段锁的思想，将对同一个计算器的修改，打散到多个变量上，然后在求和。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS hit_counter;
 CREATE TABLE hit_counter (
@@ -330,7 +330,7 @@ SELECT SUM(cnt) FROM hit_counter;
 
 一个常见需要时每个一段时间开始一个新的计算器（例如，每天一个）。
 
-[source,sql,linenums]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS daily_hit_counter;
 CREATE TABLE daily_hit_counter (
@@ -376,7 +376,7 @@ MySQL 的 `ALTER TABLE` 操作的性能对于大表来说是个大问题。 MySQ
 
 不是所有的 `ALTER TABLE` 操作都会引起表重建。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 -- 很慢，N 多次读和 N 多次插入操作
 ALTER TABLE film
@@ -407,7 +407,7 @@ TIP: `ALTER TABLE` 允许使用 `ALTER COLUMN`、 `MODIFY COLUMN` 和 `CHANGE CO
 
 为了高效地载入数据到 MyISAM 表中，有一个常用的技巧是先禁用索引、载入数据，然后重新启用索引。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 ALTER TABLE load_data DISABLE KEYS;
 

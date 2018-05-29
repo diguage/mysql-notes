@@ -272,7 +272,7 @@ B-Tree 对索引列是顺序组织存储的，所以很适合查找范围数据�
 
 例如：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 CREATE TABLE people (
   last_name  VARCHAR(50)     NOT NULL,
@@ -317,7 +317,7 @@ B+树索引并不能找到一个给定键值的具体行。B+树索引能找到�
 
 在 MySQL 中，只有 Memory 引擎显式支持哈希索引。 Memory 引擎是支持 非唯一哈希索引的。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 CREATE TABLE hash_test (
   fname VARCHAR(50) NOT NULL,
@@ -351,7 +351,7 @@ InnoDB 引擎有一个特殊的功能叫“自适应哈希索引（adaptive hash
 如果存储引擎不支持哈希索引，可以模拟 InnoDB 一样创建哈希索引。思路：在 B-Tree 基础上创建一个伪哈希索引。并不是真正的哈希索引，本质还是使用 B-Tree 进行查找，但它使用哈希值而不是键本身进行查找。需要做的就是在查询的 `WHERE` 子句中手动指定使用哈希函数。
 
 .以 URL 列为例的自定义哈希索引
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT id
 FROM url
@@ -370,7 +370,7 @@ WHERE url='http://www.diguage.com/'
 自定义哈希索引的缺陷是需要维护哈希值。可以手动维护，也可以使用触发器实现。示例如下：
 
 .基于触发器的自定义哈希索引
-[source,sql]
+[{sql_source_attr}]
 ----
 DROP TABLE IF EXISTS url;
 CREATE TABLE url (
@@ -421,7 +421,7 @@ WHERE url_crc = crc32('http:\/\/www.diguage.com/')
 
 生日悖论，出现哈希冲突的概率的增长速度可能比想象的要快得多。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT
   CRC32('gnu'),
@@ -434,7 +434,7 @@ TIP: 可以把哈希索引的实现原理对比 `HashMap` 的代码实现。
 
 如果数据表非常大， `CRC32()` 会出现大量的哈希冲突，则可以实现一个简单的 64 位哈希函数。一个简单的办法可以使用 `MD5()` 函数返回值的一部分来作为自定义函数。性能稍差，但实现简单。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT CONV(RIGHT(MD5('http:\/\/www.diguage.com/'), 16), 16, 10) AS hash64;
 ----
@@ -515,7 +515,7 @@ Tapio Lahdenmaki 和 Michael Leach 在书中介绍了如何评价一个索引是
 为了觉得前缀的合适长度，需要找到最常见的值的列表，然后和最常见的前缀列表进行比较。
 
 .使用 SQL 语句来查看前缀长度的选择性
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT
   COUNT(DISTINCT LEFT(last_name, 3)) / COUNT(*) AS nam3,
@@ -566,7 +566,7 @@ NOTE: 有时后缀索引(suffix index)也有用途。 MySQL 原生不支持反�
 [TIP]
 ====
 这就是在思考建立联合索引时的一个指导原则！选择方法如下：
-[source,sql]
+[{sql_source_attr}]
 ----
 USE sakila; -- <1>
 
@@ -586,7 +586,7 @@ FROM payment;
 
 经验法则考虑的是全局基数和选择性，而不是某个具体查询。
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT
   COUNT(DISTINCT staff_id) / COUNT(*)    AS staff_id_selectivity,
@@ -640,7 +640,7 @@ InnoDB 通过主键聚集数据。如果没有定义主键， InnoDB 会选择�
 
 为了方便讲解，分别使用 InnoDB 和 MyISAM 引擎建立结构如下的表，并按主键随机顺序插入主键值在 1 ~ 10000 的10000条数据：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 CREATE TABLE layout_test (
   col1 INT NOT NULL,
@@ -746,7 +746,7 @@ WARNING: 这里思考一下，什么样的查询才是覆盖索引？需要满�
 
 从下面的查询来看：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT *
 FROM products
@@ -761,7 +761,7 @@ WHERE actor = 'SEAN CARREY'
 
 可以重新查询并巧妙地设计索引，先将索引扩展至覆盖三个数据列（actor、title、prod_id），然后如下方式重写查询：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 SELECT *
 FROM products
@@ -914,7 +914,7 @@ B-Tree 索引可能会碎片化，这会降低查询的效率。碎片化的索�
 
 对不支持 `OPTIMIZE TABLE` 的存储引擎，可以通过一个不做任何操作的 `ALTER TABLE` 操作来重建表。只需要将表的存储引擎修改为当前的引擎即可：
 
-[source,sql]
+[{sql_source_attr}]
 ----
 ALTER TABLE <table> ENGINE=<engine>;
 ----

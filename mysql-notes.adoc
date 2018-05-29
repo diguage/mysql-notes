@@ -27,6 +27,9 @@ D瓜哥 <https://www.diguage.com/>
 :homepage: http://www.diguage.com/
 
 
+:sql_source_attr: source,sql,linenums,subs="attributes,verbatim"
+
+
 ++++
 include::analytics.htm[]
 ++++
