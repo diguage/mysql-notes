@@ -71,4 +71,9 @@ $gsed -i "s/https:\/\/fonts.googleapis.com/\/\/fonts.proxy.ustclug.org/" $origin
 
 $htmlminifier -c html-minifier.config.json $origin_html_file_name -o $web_html_file_name
 
-rsync -avz --exclude=".*" ./images ./$web_html_file_name $style_dir deployer@notes.diguage.com:/home/deployer/diguage.com/notes/mysql
+echo "`date '+%Y-%m-%d %H:%M:%S'` build"
+
+if [ ! -n "$1" ]; then
+    rsync -avz --exclude=".*" ./images ./$web_html_file_name $style_dir deployer@notes.diguage.com:/home/deployer/diguage.com/notes/mysql
+    echo "`date '+%Y-%m-%d %H:%M:%S'` deploy"
+fi
