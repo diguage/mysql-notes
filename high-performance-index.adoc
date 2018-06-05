@@ -577,6 +577,50 @@ Tapio Lahdenmaki 和 Michael Leach 在书中介绍了如何评价一个索引是
 
 应该养成简化 `WHERE` 条件的习惯，始终将索引列单独放在比较符合的一侧。
 
+.对比独立列与
+[{sql_source_attr}]
+----
+USE sakila;
+
+# 带数学计算的例子
+EXPLAIN
+SELECT actor_id
+FROM actor
+WHERE actor_id + 1 = 5 \G
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: actor
+   partitions: NULL
+         type: index
+possible_keys: NULL
+          key: idx_actor_last_name
+      key_len: 182
+          ref: NULL
+         rows: 200
+     filtered: 100.00
+        Extra: Using where; Using index
+
+# 独立列
+EXPLAIN
+SELECT actor_id
+FROM actor
+WHERE actor_id = 4 \G
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: actor
+   partitions: NULL
+         type: const
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 2
+          ref: const
+         rows: 1
+     filtered: 100.00
+        Extra: Using index
+----
+
 ==== 前缀索引和索引选择性
 
 当索引很长的字符列，会让索引变得大且慢，一个策略是前面提到过的模拟哈希索引。
@@ -594,16 +638,91 @@ Tapio Lahdenmaki 和 Michael Leach 在书中介绍了如何评价一个索引是
 .使用 SQL 语句来查看前缀长度的选择性
 [{sql_source_attr}]
 ----
-SELECT
-  COUNT(DISTINCT LEFT(last_name, 3)) / COUNT(*) AS nam3,
-  COUNT(DISTINCT LEFT(last_name, 4)) / COUNT(*) AS nam4,
-  COUNT(DISTINCT LEFT(last_name, 5)) / COUNT(*) AS nam5,
-  COUNT(DISTINCT LEFT(last_name, 6)) / COUNT(*) AS nam6,
-  COUNT(DISTINCT LEFT(last_name, 7)) / COUNT(*) AS nam7
-FROM employees;
-----
+USE sakila;
 
-前缀索引时一种能使索引更小、更快的有效办法；也有缺点，MySQL 无法使用前缀索引做 `ORDER BY` 和 `GROUP BY`，也无法使用前缀索引做覆盖索引。
+# 字符串长度统计
+SELECT
+  CHAR_LENGTH(city) AS len,
+  count(*)          AS cnt
+FROM city
+GROUP BY len
+ORDER BY len DESC;
+
++-----+-----+
+| len | cnt |
++-----+-----+
+|  26 |   3 |
+|  23 |   4 |
+|  22 |   2 |
+|  21 |   2 |
+|  20 |   4 |
+|  19 |   5 |
+|  18 |   4 |
+|  17 |   7 |
+|  16 |   6 |
+|  15 |   9 |
+|  14 |   8 |
+|  13 |   8 |
+|  12 |  15 |
+|  11 |  29 |
+|  10 |  45 |
+|   9 |  61 |
+|   8 |  88 |
+|   7 |  95 |
+|   6 | 107 |
+|   5 |  56 |
+|   4 |  35 |
+|   3 |   6 |
+|   2 |   1 |
++-----+-----+
+
+
+# 字符串选择性
+SELECT
+  COUNT(DISTINCT LEFT(city, 2)) / COUNT(*) AS cit2,
+  COUNT(DISTINCT LEFT(city, 3)) / COUNT(*) AS cit3,
+  COUNT(DISTINCT LEFT(city, 4)) / COUNT(*) AS cit4,
+  COUNT(DISTINCT LEFT(city, 5)) / COUNT(*) AS cit5,
+  COUNT(DISTINCT LEFT(city, 6)) / COUNT(*) AS cit6,
+  COUNT(DISTINCT LEFT(city, 7)) / COUNT(*) AS cit7,
+  COUNT(DISTINCT LEFT(city, 8)) / COUNT(*) AS cit8,
+  COUNT(DISTINCT city) / COUNT(*)          AS city
+FROM city;
+
++--------+--------+--------+--------+--------+--------+--------+--------+
+| cit2   | cit3   | cit4   | cit5   | cit6   | cit7   | cit8   | city   |
++--------+--------+--------+--------+--------+--------+--------+--------+
+| 0.3133 | 0.7633 | 0.9383 | 0.9750 | 0.9900 | 0.9933 | 0.9933 | 0.9983 |
++--------+--------+--------+--------+--------+--------+--------+--------+
+
+# 再对比一下不同长度字符的分布情况
+SELECT
+  count(*)      AS cnt,
+  left(city, 2) AS pref
+FROM city
+GROUP BY pref
+ORDER BY cnt DESC; -- <1>
+
+SELECT
+  count(*)      AS cnt,
+  left(city, 6) AS pref
+FROM city
+GROUP BY pref
+ORDER BY cnt DESC; -- <1>
+----
+<1> 长度太长，就不再展示了。
+
+根据统计，我们只需要针对前六个字符建立前缀索引即可：
+
+.建立前缀索引
+[{sql_source_attr}]
+----
+ALTER TABLE city
+  ADD KEY (city(6)); -- <1>
+----
+<1> 注意：这里只取了 `city` 列前六个字符来建立索引。
+
+前缀索引时一种能使索引更小、更快的有效办法；也有缺点，**MySQL 无法使用前缀索引做 `ORDER BY` 和 `GROUP BY`，也无法使用前缀索引做覆盖索引**。
 
 一个常见的场景是针对很长的十六进制唯一 ID 使用前缀索引。例如 SessionID。
 
@@ -617,8 +736,80 @@ NOTE: 有时后缀索引(suffix index)也有用途。 MySQL 原生不支持反�
 
 在多个列上山里独立的单列索引大部分情况下并不能提高 MySQL 的查询性能。 MySQL 5.0 和更新版本引入了一种“索引合并”（index merge）的策略，一定程度上可以使用表上的多个单列索引来定位指定的行。
 
+.索引合并
+[{sql_source_attr}]
+----
+# 不支持索引合并就需要做全表扫描
+SELECT
+  film_id,
+  actor_id
+FROM film_actor
+WHERE film_id = 1 OR actor_id = 1;
 
-索引合并测试有时候是一种优化的结果，但实际上更多时候说明了表上的索引建的很糟糕：
+# 在支持索引合并前，只能这样优化
+EXPLAIN
+SELECT
+  film_id,
+  actor_id
+FROM film_actor
+WHERE actor_id = 1
+UNION ALL
+SELECT
+  film_id,
+  actor_id
+FROM film_actor
+WHERE film_id = 1 AND actor_id <> 1 \G
+*************************** 1. row ***************************
+           id: 1
+  select_type: PRIMARY
+        table: film_actor
+   partitions: NULL
+         type: ref
+possible_keys: PRIMARY
+          key: PRIMARY
+      key_len: 2
+          ref: const
+         rows: 19
+     filtered: 100.00
+        Extra: Using index
+*************************** 2. row ***************************
+           id: 2
+  select_type: UNION
+        table: film_actor
+   partitions: NULL
+         type: range
+possible_keys: PRIMARY,idx_fk_film_id
+          key: idx_fk_film_id
+      key_len: 4
+          ref: NULL
+         rows: 10
+     filtered: 100.00
+        Extra: Using where; Using index
+
+
+# 支持索引合并后
+EXPLAIN
+SELECT
+  film_id,
+  actor_id
+FROM film_actor
+WHERE film_id = 1 OR actor_id = 1 \G
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: film_actor
+   partitions: NULL
+         type: index_merge
+possible_keys: PRIMARY,idx_fk_film_id
+          key: idx_fk_film_id,PRIMARY
+      key_len: 2,2
+          ref: NULL
+         rows: 29
+     filtered: 100.00
+        Extra: Using union(idx_fk_film_id,PRIMARY); Using where
+----
+
+索引合并测试有时候是一种优化的结果，但**实际上更多时候说明了表上的索引建的很糟糕**：
 
 * 当出现服务器对多个索引做相交操作时（通常有多个 `AND` 条件），通常意味着需要一个包含所有相关列的多列索引，而不是多个独立的单列索引。
 * 当服务器需要多多个索引做联合操作时（通常有多个 `OR` 条件），通常需要耗费大量 CPU 和内存资源在算法的缓存、排序和合并操作上。特别是当有些索引的选择性不高，需要合并扫描返回的大量数据的时候。
@@ -666,6 +857,8 @@ FROM payment;
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 SELECT
   COUNT(DISTINCT staff_id) / COUNT(*)    AS staff_id_selectivity,
   COUNT(DISTINCT customer_id) / COUNT(*) AS customer_id_selectivity,
