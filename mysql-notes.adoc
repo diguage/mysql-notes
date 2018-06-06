@@ -1,6 +1,7 @@
 = MySQL 学习笔记^Alpha^
 D瓜哥 <https://www.diguage.com/>
 {docdate}
+:stem: latexmath
 :doctype: book
 :icons: font
 :iconfont-cdn: //cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css
