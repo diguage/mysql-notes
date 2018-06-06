@@ -1182,6 +1182,189 @@ InnoDB 只有在访问行的时候才会对其加锁，而索引能够减少 Inn
 
 InnoDB 在二级索引上使用共享（读）锁，但访问主键索引需要排他（写）锁。
 
+
+=== 三星索引实战
+
+==== 定义
+
+. **如果与一个查询相关的索引行是相邻的，或者至少相距足够靠近的话**，那这个索引就可以被标记上第一颗星。__这最小化了必须扫描的索引片的宽度。__
+. **如果索引行的顺序与查询语句的需求一致**，则索引可以被标记上第二颗星。__这排除了排序操作。__
+. **如果索引行包含查询语句中的所有列**，那么索引就可以被标记上第三颗星。完全符合三星就是“覆盖索引”。将一个列排除在索引之外可能会导致许多速度较慢的磁盘随机读。
+
+==== 实践出真知
+
+现在有表如下：
+
+.建表语句
+[{sql_source_attr}]
+----
+USE  sakila;
+
+DROP TABLE cust;
+
+CREATE TABLE `cust` (
+  `cust_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
+  `first_name` varchar(45) NOT NULL,
+  `last_name` varchar(45) NOT NULL,
+  `email` varchar(50) DEFAULT NULL,
+  `city_id` smallint(5) unsigned NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  `create_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cust_id`),
+  KEY `idx_last_name_first_name` (`last_name`,`first_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO cust (first_name, last_name, email, city_id, active)
+  SELECT
+    first_name,
+    last_name,
+    email,
+    address_id,
+    active
+  FROM customer;
+
+UPDATE cust
+SET last_name = 'CABRAL'
+WHERE cust_id > 550;
+----
+
+如下查询是否符合三星索引的标准：
+
+.查询语句
+[{sql_source_attr}]
+----
+SELECT
+  cust_id,
+  first_name
+FROM cust
+WHERE last_name = 'CHOATE'
+      AND city_id = 499
+ORDER BY first_name;
+
+# 查询已有的索引
+SHOW INDEX FROM cust;
+----
+
+
+为了满足第一颗星:: 
+取出所有等值谓词的列（`Where col=...`） ，把这些列作为索引最开头的列 -- 以任意顺序都可以。
++
+针对上面的查询，可选的索引字段为：`(last_name, city_id)` 或 `(city_id, last_name)`。这样可以将索引片宽度缩减到最窄。
+为了满足第二颗星:: 
+将 `ORDER BY` 列加入到索引中。不要改变这些列的顺序，但是忽略哪些在第一步中已经加入索引的列。
++
+针对上面的查询，增加字段 `first_name`，可选索引字段变为：`(last_name, city_id, first_name)` 或 `(city_id, last_name, first_name)`。
++
+[WARNING]
+====
+D瓜哥注：
+
+针对这个查询来说，加入 `first_name` 字段，结果集中的记录就是有序的。因为通过 `last_name = 'CHOATE' AND city_id = 499` 而言，可以唯一确定紧挨着的一段数据。那么排序性就“传导”到了第三个字段 `first_name` 字段上去。
+
+在其他类型中，比如 `city_id > 500` 而言，则是“小范围有序，大范围无序”。则需要排序才能保证有序性。
+====
+为了满足第三颗星:: 
+将查询语句中剩余的列加到索引中去，列在索引中添加的顺序对查询语句的性能没有影响，但是将**易变的列**放在最后能够降低更新的成本。
++
+最后，针对上面这个查询，整个查询中，只剩下 `cust_id`，加入索引字段，可选索引字段变为：`(last_name, city_id, first_name, cust_id)` 或 `(city_id, last_name, first_name, cust_id)`。
+
+根据上面的分析，我们得到了两个可选项：`(last_name, city_id, first_name, cust_id)` 或 `(city_id, last_name, first_name, cust_id)`。那么，我们改如何选择呢？
+
+前面的 <<choose-index-fields-sequence>> 中，提到了如何选择索引列顺序的一条经验法则：**将选择性最高的列放到索引最前列。**在不考虑其他业务，只关注当前查询SQL的情况下，我们可以遵循这条法则。前文 <<choose-index-fields-sequence>> 提到一个确定字段选择性的示例 SQL，这里修改如下：
+
+.查看字段选择性
+[{sql_source_attr}]
+----
+SELECT
+  count(DISTINCT last_name) / count(*),
+  count(DISTINCT city_id) / count(*)
+FROM cust;
+
+# 结果如下：
++--------------------------------------+------------------------------------+
+| count(DISTINCT last_name) / count(*) | count(DISTINCT city_id) / count(*) |
++--------------------------------------+------------------------------------+
+|                               0.9182 |                             1.0000 |
++--------------------------------------+------------------------------------+
+----
+
+我们只需要根据这里的结构，选择数字最大的字段在前面即可。根据结果，更合适的索引序列为：`(city_id, last_name, first_name, cust_id)`。
+
+[TIP]
+====
+*对于可以“任意顺序皆可”的列，两个法则可以遵循*
+
+. 将选择性更好的放在前面；
+. 如果选择性一样好，将稳定、不易变的列，放在前面，这样在修改时，移动的距离更短
+====
+
+
+*结合 MySQL InnoDB 引擎的自身特性，`(city_id, last_name, first_name, cust_id)` 是最佳方案吗？为什么？*
+
+==== 范围谓词与三星索引
+
+下面，来看一下带有范围谓词的示例：
+
+.范围谓词查询示例
+[{sql_source_attr}]
+----
+SELECT
+  cust_id,
+  first_name
+FROM cust
+WHERE last_name BETWEEN 'ADAMS' AND 'DANIELS'
+      AND city_id = 580
+ORDER BY first_name;
+----
+
+这个查询该如何建立“三星索引”呢？
+
+. 首先是最简单的星，第三颗星。确保查询语句中的所有列都在索引中就能满足第三颗星：`{city_id, last_name, cust_id, first_name}`
+. 第二，添加 `ORDER BY` 列 `first_name` 能使索引满足第二颗星。但是，前提是必须放在 `BETWEEN` 谓词列 `last_name` 前面才行。如果 `ORDER BY` 列 `first_name` 放在 `BETWEEN` 谓词列 `last_name` 后面，则索引不是按照 `first_name` 排序，因此需要排序操作。因此，为满足第二颗星，  `ORDER BY` 列 `first_name` 必须放在 `BETWEEN` 谓词列 `last_name` 前面。如：`(first_name……)` 或 `(city_id, first_name……)` 等
+. 第三，考虑第一颗星。如果 `city_id` 是索引第一列，将会有一个相对比较窄的索引片需要扫描。（当然，这取决于 `city_id` 的选择性。）如果用 `(city_id, last_name……)` 的话，索引片更窄。那么，其他列（例如 `first_name`）就不能放在这两列之间。
+
+综上，理想索引会有几颗星呢？首先，它一定能有第三颗星。其次，只能有第一颗星或第二颗星，不能同时拥有两者。换句话说，我们只能二选一：
+
+* 避免排序 -- 拥有第二颗星；
+* 拥有可能最窄索引片，减少索引以及读取行数，拥有第一颗星。
+
+具体选择，就要看业务需求。
+
+==== 设计最佳索引的算法
+
+===== 候选A -- 选择最窄的索引片
+
+. 取出对于优化器来说不算过分复杂的**等值谓词列**，作为索引的前导列 -- 以任意顺序皆可。
+. 将选择性最好的范围谓词作为索引的下一列，如果存在的话；
+. 以正确的顺序添加 `ORDER BY` 列（如果 `ORDER BY` 列有 `DESC` 的话，加上 `DESC`。）；
+. 以任意顺序将 `SELECT` 语句中其余的列添加至索引中（但是需要以不易变的列开始）。
+
+===== 候选B -- 避免排序
+
+. 取出对于优化器来说不过分复杂的等值谓词列，作为索引的前导列 -- 以任意顺序皆可。
+. 以正确的顺序添加 `ORDER BY` 列（如果 `ORDER BY` 列有 `DESC` 的话，加上 `DESC`。）；
+. 以任意顺序将 `SELECT` 语句中其余的列添加至索引中（但是需要以不易变的列开始）。
+
+*如果结果集很大的话，为了产生第一页的数据，二星索引后续A（需要排序）可能会花费非常长的时间。*
+
+=== 设计出色索引的九个步骤
+
+. 当表结构第 1 版设计（主键、外键、表行顺序）完成时，就开始创建第 0 版的索引：主键索引、外键索引及候选键索引（如果有的话）。
+. 对第 1 版表结构设计的性能表现进行检查：使用 QUBE 评估一些负载事务和批处理程序在理想索引下的响应时间。若评估结果无法满足要求，则将那些具有 1:1 或者 1:C (1对0或1)关系的表进行合并，同时将冗余数据添加至有 1:M (一对多)关系的依赖表中。
+. 当表结构基本稳定后，你可以开始添加一些明显需要的索引 -- 基于对应用系统的理解。
+. 若一个表的变化频率很高（如每秒有大于 50 次的插入、更新或删除），那么你应该使用 QUBE 评估一下该表最多容纳有多少个索引。
+. 当知道一个程序的数据库处理模式（事务型或批处理型）后，就需要用最新的数据库版本进行最坏输入下的 QUBE 计算。
+.. 若评估出一个事务的本地响应时间超过了应用的警戒值（如2s），则表明当前的数据库版本无法满足该程序。
+.. 对一个批处理而言，对响应延时的接受度必须针对具体情况逐个评估。如果超过告警阈值，则需要处理：
+... 对索引改进（半宽索引、宽索引或理想索引）；
+... 考虑所有情况，对慢查询进行更精确的评估，进而修改表的设计；
+... 最差情况下，必须与用户协商调整需求，或者与管理人员协商调整硬件配置
+. SQL 语句被编写后，开发人员就应该使用基本问题（BQ），或者如果可行的话，用基础连接问题（BJQ）对其进行评估。
+. 当应用程序发布至生产环境后，有必要进行一次快速的 `EXPLAIN` 检查：对所有引起全表扫描或全索引扫描的 SQL 调用进行分析。这一检查过程也许能发现不合适的索引或优化器问题。
+. 当生产系统正式投入使用后，需要针对首个高峰时段生成一个 LRT 级别的异常报告（尖刺报告或类似的报告）。若一个响应时间问题并非由排队或优化器问题引起，那么你应该用第 5 步中的方法进行处理。
+. 至少每周生成一个 LRT 级别的异常报告。
+
 === 索引案例学习
 
 第一件需要考虑的事情是需要使用索引来排序，还是先检索数据再排序。使用索引排序会严格限制索引和查询的设计。

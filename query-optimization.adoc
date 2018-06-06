@@ -38,6 +38,12 @@
 
 这三个指标都会记录到 MySQL 的慢日志中，所以检查慢日志记录是找出扫描行数过多的查询的好办法。
 
+.查看 MySQL 慢日志配置
+[{sql_source_attr}]
+----
+SHOW GLOBAL VARIABLES LIKE '%slow%';
+----
+
 TIP: 可以写一个脚本来分析 MySQL 的日志，进而找出比较慢的查询。
 
 响应时间::
@@ -262,6 +268,8 @@ MySQL 使用基于成本的优化器，它将尝试预测一个查询使用某�
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 SELECT SQL_NO_CACHE count(*)
 FROM film_actor;
 
@@ -304,6 +312,8 @@ MySQL 可以使用一些等价变换来简化并规范表达式。可以科比�
 +
 [{sql_source_attr}]
 ----
+USE sakila;
+
 EXPLAIN
 SELECT
   f.film_id,
@@ -353,6 +363,8 @@ MySQL 在某些情况下可以将子查询转换成一种效率更高的形式�
 +
 [{sql_source_attr}]
 ----
+USE sakila;
+
 EXPLAIN
 SELECT film_id
 FROM film
@@ -465,6 +477,8 @@ MySQL 优化器最重要的一部分就是关联查询优化，它决定了多�
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 EXPLAIN
 SELECT
   film.film_id,
@@ -523,6 +537,8 @@ possible_keys: PRIMARY
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 EXPLAIN
 SELECT STRAIGHT_JOIN
   film.film_id,
@@ -631,130 +647,6 @@ TIP: 从这句话中也可以看出，如果可以，尽量使用一张表中的
 
 MySQL 将结果集返回客户端是一个增量、逐步返回的过程。
 
-=== 三星索引实战
-
-==== 定义
-
-. **如果与一个查询相关的索引行是相邻的，或者至少相距足够靠近的话**，那这个索引就可以被标记上第一颗星。__这最小化了必须扫描的索引片的宽度。__
-. **如果索引行的顺序与查询语句的需求一致**，则索引可以被标记上第二颗星。__这排除了排序操作。__
-. **如果索引行包含查询语句中的所有列**，那么索引就可以被标记上第三颗星。完全符合三星就是“覆盖索引”。将一个列排除在索引之外可能会导致许多速度较慢的磁盘随机读。
-
-==== 实践出真知
-
-现在有表如下：
-
-.建表语句
-[{sql_source_attr}]
-----
-USE  sakila;
-
-DROP TABLE cust;
-
-CREATE TABLE `cust` (
-  `cust_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
-  `first_name` varchar(45) NOT NULL,
-  `last_name` varchar(45) NOT NULL,
-  `email` varchar(50) DEFAULT NULL,
-  `city_id` smallint(5) unsigned NOT NULL,
-  `active` tinyint(1) NOT NULL DEFAULT '1',
-  `create_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`cust_id`),
-  KEY `idx_fk_address_id` (`last_name`,`first_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO cust (first_name, last_name, email, city_id, active)
-  SELECT
-    first_name,
-    last_name,
-    email,
-    address_id,
-    active
-  FROM customer;
-
-UPDATE cust
-SET last_name = 'CABRAL'
-WHERE cust_id > 550;
-----
-
-如下查询是否符合三星索引的标准：
-
-.查询语句
-[{sql_source_attr}]
-----
-SELECT
-  cust_id,
-  first_name
-FROM cust
-WHERE last_name = 'CHOATE'
-      AND city_id = 499
-ORDER BY first_name;
-----
-
-
-为了满足第一颗星:: 
-取出所有等值谓词的列（`Where col=...`） ，把这些列作为索引最开头的列 -- 以任意顺序都可以。
-+
-针对上面的查询，可选的索引字段为：`(last_name, city_id)` 或 `(city_id, last_name)`。这样可以将索引片宽度缩减到最窄。
-为了满足第二颗星:: 
-将 `ORDER BY` 列加入到索引中。不要改变这些列的顺序，但是忽略哪些在第一步中已经加入索引的列。
-+
-针对上面的查询，增加字段 `first_name`，可选索引字段变为：`(last_name, city_id, first_name)` 或 `(city_id, last_name, first_name)`。
-+
-[WARNING]
-====
-D瓜哥注：
-
-针对这个查询来说，加入 `first_name` 字段，结果集中的记录就是有序的。因为通过 `last_name = 'CHOATE' AND city_id = 499` 而言，可以唯一确定紧挨着的一段数据。那么排序性就“传导”到了第三个字段 `first_name` 字段上去。
-
-在其他类型中，比如 `city_id > 500` 而言，则是“小范围有序，大范围无序”。还需要至少做一次合并，才能保证有序。
-====
-为了满足第三颗星:: 
-将查询语句中剩余的列加到索引中去，列在索引中添加的顺序对查询语句的性能没有影响，但是将**易变的列**放在最后能够降低更新的成本。
-+
-最后，针对上面这个查询，整个查询中，只剩下 `cust_id`，加入索引字段，可选索引字段变为：`(last_name, city_id, first_name, cust_id)` 或 `(city_id, last_name, first_name, cust_id)`。
-
-根据上面的分析，我们得到了两个可选项：`(last_name, city_id, first_name, cust_id)` 或 `(city_id, last_name, first_name, cust_id)`。那么，我们改如何选择呢？
-
-前面的 <<choose-index-fields-sequence>> 中，提到了如何选择索引列顺序的一条经验法则：**将选择性最高的列放到索引最前列。**在不考虑其他业务，只关注当前查询SQL的情况下，我们可以遵循这条法则。前文 <<choose-index-fields-sequence>> 提到一个确定字段选择性的示例 SQL，这里修改如下：
-
-.查看字段选择性
-[{sql_source_attr}]
-----
-SELECT
-  count(DISTINCT last_name) / count(*),
-  count(DISTINCT city_id) / count(*)
-FROM cust;
-
-# 结果如下：
-+--------------------------------------+------------------------------------+
-| count(DISTINCT last_name) / count(*) | count(DISTINCT city_id) / count(*) |
-+--------------------------------------+------------------------------------+
-|                               0.9182 |                             1.0000 |
-+--------------------------------------+------------------------------------+
-----
-
-我们只需要根据这里的结构，选择数字最大的字段在前面即可。根据结果，更合适的索引序列为：`(city_id, last_name, first_name, cust_id)`。
-
-*结合 MySQL InnoDB 引擎的自身特性，`(city_id, last_name, first_name, cust_id)` 是最佳方案吗？为什么？*
-
-==== 范围谓词与三星索引
-
-下面，来看一下带有范围谓词的示例：
-
-.范围谓词查询示例
-[{sql_source_attr}]
-----
-SELECT
-  cust_id,
-  first_name
-FROM cust
-WHERE last_name BETWEEN 'ADAMS' AND 'DANIELS'
-      AND city_id = 580
-ORDER BY first_name;
-----
-
-这个查询该如何建立“三星索引”呢？
 
 === MySQL 查询优化器的局限性
 
@@ -767,6 +659,8 @@ MySQL 的子查询实现得非常糟糕。最糟糕的一类查询是 `WHERE` �
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 -- 原始写法
 SELECT *
 FROM film
@@ -800,6 +694,8 @@ TIP: 在 MySQL 5.7 中，上面第一种 SQL 存在的问题已经得到解决�
 
 [{sql_source_attr}]
 ----
+USE sakila;
+
 EXPLAIN
 SELECT
   film_id,
