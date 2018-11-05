@@ -1,3 +1,4 @@
 name: mysql
 title: MySQL 学习笔记
+version: alpha
 start_page: index.adoc
