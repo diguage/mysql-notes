@@ -3,9 +3,9 @@
 # 构建脚本
 
 base_dir=`pwd`
-origin_file_name=mysql-notes
+origin_file_name=index
 adoc_file_name=${origin_file_name}.adoc
-origin_html_file_name=${origin_file_name}.html
+origin_html_file_name=${origin_file_name}-html.html
 web_html_file_name=index.html
 style_dir=styles
 
