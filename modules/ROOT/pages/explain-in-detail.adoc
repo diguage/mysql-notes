@@ -1,4 +1,4 @@
-== MySQL `explain` 详解
+= MySQL `explain` 详解
 
 . `explain` 语法
 . `explain` 输出
@@ -101,7 +101,7 @@
 
 ----
 
-=== `EXPLAIN` 语法
+== `EXPLAIN` 语法
 
 `DESCRIBE` 和 `EXPLAIN` 是同义词。在实践中，`DESCRIBE` 多用于显示表结构，而 `EXPLAIN` 多用于显示 SQL 语句的执行计划。
 
@@ -141,15 +141,15 @@ FROM user_extdata m
 WHERE m.city_id IN (1, 2, 3, 4) ;
 ----
 
-==== 获取表结构
+=== 获取表结构
 
 `DESCRIBE` 是 `SHOW COLUMNS` 的简写形式。
 
 
 
-=== `explain` 输出
+== `explain` 输出
 
-==== `select_type`
+=== `select_type`
 
 `SIMPLE`:: 简单SELECT,不使用UNION或子查询等
 `PRIMARY`:: 查询中若包含任何复杂的子部分,最外层的select被标记为PRIMARY
@@ -163,11 +163,11 @@ WHERE m.city_id IN (1, 2, 3, 4) ;
 `UNCACHEABLE SUBQUERY`:: 一个子查询的结果不能被缓存，必须重新评估外链接的第一行
 `UNCACHEABLE UNION`::
 
-==== `table`
+=== `table`
 
-==== `partitions`
+=== `partitions`
 
-==== `type`
+=== `type`
 
 `system`:: 当MySQL对查询某部分进行优化，并转换为一个常量时，使用这些类型访问。如将主键置于where列表中，MySQL就能将该查询转换为一个常量,system是const类型的特例，当查询的表只有一行的情况下，使用system
 `const`::
@@ -182,16 +182,16 @@ WHERE m.city_id IN (1, 2, 3, 4) ;
 `index`:: Full Index Scan，index与ALL区别为index类型只遍历索引树
 `ALL`:: Full Table Scan， MySQL将遍历全表以找到匹配的行
 
-==== `possible_keys`
+=== `possible_keys`
 
-==== `key`
+=== `key`
 
-==== `key_len`
+=== `key_len`
 
-==== `ref`
+=== `ref`
 
-==== `rows`
+=== `rows`
 
-==== `filtered`
+=== `filtered`
 
-==== `extra`
+=== `extra`

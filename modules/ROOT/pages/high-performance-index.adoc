@@ -1,7 +1,7 @@
-== 索引背后的故事
+= 索引背后的故事
 
 
-=== 从问题入手
+== 从问题入手
 
 开始正文之前，大家可以思考几个问题：
 
@@ -19,7 +19,7 @@ TIP: 如何在一堆数据中查找某个数据？简单点，比如找出100以
 
 常言道：知其然，知其所以然。学习一门技术的时候，不仅要学怎么使用，还要学习这门技术出现的背景是什么，是为了解决什么问题出现的，技术本身又有什么不足。这样才能更好地理解这门技术。所以，在正式开始讲解索引之前，让我们先看看索引出现的原因以及实现索引时使用的数据结构。
 
-=== 追本溯源
+== 追本溯源
 
 计算机科学分为两块，一块是硬件；另外，一块就是软件。我们从这两方面说起。
 
@@ -29,29 +29,29 @@ TIP: 如何在一堆数据中查找某个数据？简单点，比如找出100以
 
 我们先了解一下硬件相关的基础知识。
 
-==== 存储金字塔
+=== 存储金字塔
 
 计算机中最重要的存储介质分为几类：硬盘、内存、二级缓存、寄存器。它们之间的对比如下：
 
-image::images/memory_hierarchy.jpg[title="存储金字塔", alt="存储金字塔", width="95%"]
+image::memory_hierarchy.jpg[title="存储金字塔", alt="存储金字塔", width="95%"]
 
 从上面的图中，我们可以看出，**从下往上，速度从慢到快，制造成本也越来越高。**几种有代表性的存储设备的典型访问速度如下：
 
-image::images/memory_access_time.png[title="存储访问时间", alt="存储访问时间", width="95%"]
+image::memory_access_time.png[title="存储访问时间", alt="存储访问时间", width="95%"]
 
 从这个图中，我们可以很明显的看出：**高速缓存的访问速度是主存的 10~100 倍，而主存的访问速度则是硬盘的 1～10W 倍。**
 
 大概就是走路和坐飞机的差别了。虽然坐飞机是飞一样的感觉，但是走路还是我们最常用的移动方式。数据存储也一样，对于一台独立的计算机，数据最后还是要落地到磁盘上。所以，我们来看看机械硬盘的结构。
 
-==== 机械硬盘结构
+=== 机械硬盘结构
 
 机械硬盘中的大致结构如下图，类似很多电影和电视剧中的留声机：
 
-image::images/magnetic_disk_storage_1.jpg[title="机械硬盘单个盘面结构轮廓图", alt="机械硬盘单个盘面结构轮廓图", width="95%"]
+image::magnetic_disk_storage_1.jpg[title="机械硬盘单个盘面结构轮廓图", alt="机械硬盘单个盘面结构轮廓图", width="95%"]
 
 机械硬盘中，每一个磁盘盘面的组成结构如下：
 
-image::images/magnetic_disk_storage.jpg[title="磁盘上的磁道、扇区和簇", alt="磁盘上的磁道、扇区和簇", width="95%"]
+image::magnetic_disk_storage.jpg[title="磁盘上的磁道、扇区和簇", alt="磁盘上的磁道、扇区和簇", width="95%"]
 
 英文名词解释：
 
@@ -63,7 +63,7 @@ image::images/magnetic_disk_storage.jpg[title="磁盘上的磁道、扇区和簇
 
 每个机械磁盘都有很多个盘面组成。整个机械磁盘的组成结构如下：
 
-image::images/disk_mechanism.jpg[title="磁盘内部结构", alt="磁盘内部结构", width="95%"]
+image::disk_mechanism.jpg[title="磁盘内部结构", alt="磁盘内部结构", width="95%"]
 
 单词解释：
 
@@ -96,16 +96,16 @@ image::images/disk_mechanism.jpg[title="磁盘内部结构", alt="磁盘内部�
 
 了解磁盘读取数据的原理以各种延迟后，我们再来看看顺序读取和随机读取的差别：
 
-image::images/disk_access.png[title="顺序读取和随机读取", alt="顺序读取和随机读取", width="95%"]
+image::disk_access.png[title="顺序读取和随机读取", alt="顺序读取和随机读取", width="95%"]
 
 因为机械硬盘的磁头移动至正确的磁道上需要时间，随机读写时，磁头不停的移动，时间都花在了磁头寻道上，导致的就是性能不高。所以，对于机械硬盘来说，连续读写性很好，但随机读写性能很差。具体对比如下：
 
 
-image::images/compare_random_and_sequential_access_in_disk_and_memory.jpg[title="对比在硬盘和内存上的随机读取和顺序读取", alt="对比在硬盘和内存上的随机读取和顺序读取", width="95%"]
+image::compare_random_and_sequential_access_in_disk_and_memory.jpg[title="对比在硬盘和内存上的随机读取和顺序读取", alt="对比在硬盘和内存上的随机读取和顺序读取", width="95%"]
 
 加州大学 Berkeley 分校统计的各种读取介质的延迟： https://people.eecs.berkeley.edu/~rcs/research/interactive_latency.html[Numbers Every Programmer Should Know By Year]
 
-==== 局部性原理与磁盘预读
+=== 局部性原理与磁盘预读
 
 由于存储介质的特性，硬盘本身存取就比主存慢很多，再加上机械运动耗费，硬盘的存取速度往往是主存的几百分分之一，因此为了提高效率，要尽量减少磁盘 I/O。由于磁盘顺序读取的效率很高（不需要寻道时间，只需很少的旋转时间），因此对于具有局部性的程序来说，预读可以提高 I/O 效率。磁盘往往也不是严格按需读取，而是每次都会预读，即使只需要一个字节，磁盘也会从这个位置开始，顺序向后读取一定长度的数据放入内存。这样做的理论依据是计算机科学中著名的局部性原理：
 
@@ -122,13 +122,13 @@ MySQL 在读取的时候，并不是每条每条读取，而是每次读取一�
 从这些硬件上来看，在内存中，甚至在一二三级高速缓存中，查找最快。当然，前提是，这些存储足够存得下。
 ====
 
-==== 时间复杂度
+=== 时间复杂度
 
 时间复杂度用来检验某个算法处理一定量的数据要花多长时间。
 
 重要的不是数据量，而是当数据量增加时运算如何增加。
 
-image::images/number_operations_of_data.jpg[title="时间复杂度变化", alt="时间复杂度变化", width="95%"]
+image::number_operations_of_data.jpg[title="时间复杂度变化", alt="时间复杂度变化", width="95%"]
 
 * 绿：O(1)
 * 蓝：O(n)
@@ -214,22 +214,22 @@ latexmath:[\frac{(10^7)^{2} 条指令}{10^{9} 条指令/秒} = 1.00 * 10^{5} 秒
 在条件允许的情况下，我们应该选择时间复杂度尽量小的算法。
 ====
 
-==== 归并排序
+=== 归并排序
 
 合并排序基于这样一个技巧：将 2 个大小为 N/2 的已排序序列合并为一个 N 元素已排序序列仅需要 N 次操作。这个方法叫做合并。
 
-image::images/merge_sort.gif[title="归并排序", alt="归并排序", width="95%"]
+image::merge_sort.gif[title="归并排序", alt="归并排序", width="95%"]
 
 这个算法有两点特别棒的优势：
 
 * 可以更改算法，以便于同时使用磁盘空间和少量内存而避免巨量磁盘 I/O。方法是只向内存中加载当前处理的部分。在仅仅100MB的内存缓冲区内排序一个几个GB的表时，这是个很重要的技巧。
 * 可以更改算法，以便于在多处理器/多线程/多服务器上运行。 分布式归并排序时 Hadoop 的关键组件之一。
 
-==== 二分查找
+=== 二分查找
 
-image::images/binary_search_23.gif[title="二分查找-最好情况", alt="二分查找", width="95%"]
+image::binary_search_23.gif[title="二分查找-最好情况", alt="二分查找", width="95%"]
 
-image::images/binary_search.gif[title="二分查找-最坏的情况", alt="二分查找", width="95%"]
+image::binary_search.gif[title="二分查找-最坏的情况", alt="二分查找", width="95%"]
 
 
 [TIP]
@@ -240,15 +240,15 @@ image::images/binary_search.gif[title="二分查找-最坏的情况", alt="二�
 ====
 
 
-==== 树
+=== 树
 
 树，这种数据结构就能满足我们的需求，我们可以只把树的上面几级保存到内存中，方便操作。如下图：
 
-image::images/big_tree.png[title="树", alt="树", width="65%"]
+image::big_tree.png[title="树", alt="树", width="65%"]
 
 树的节点也可以保持有序状态：
 
-image::images/big_search_tree.jpeg[title="搜索树", alt="搜索树", width="75%"]
+image::big_search_tree.jpeg[title="搜索树", alt="搜索树", width="75%"]
 
 我们来看一下最简单的树结构。
 
@@ -261,11 +261,11 @@ image::images/big_search_tree.jpeg[title="搜索树", alt="搜索树", width="75
 ====
 
 
-==== 二叉查找树
+=== 二叉查找树
 
 在二叉查找树和在有序数组中查找某一个指定元素的对比如下：
 
-image::images/binaray_search_tree.gif[title="二叉查找树", alt="二叉查找树", width="95%"]
+image::binaray_search_tree.gif[title="二叉查找树", alt="二叉查找树", width="95%"]
 
 二叉查找树中每个节点要保证两点：
 
@@ -278,7 +278,7 @@ http://www.cs.usfca.edu/~galles/visualization/BST.html[二叉查找树在线演�
 
 上面的是理想状况下的情况。但在极端情况下，二叉查找树的查询成本有可能是 n。例如：
 
-image::images/skewedTree.png[title="最坏情况下的二叉查找树", alt="最坏情况下的二叉查找树", width="65%"]
+image::skewedTree.png[title="最坏情况下的二叉查找树", alt="最坏情况下的二叉查找树", width="65%"]
 
 
 
@@ -291,17 +291,17 @@ image::images/skewedTree.png[title="最坏情况下的二叉查找树", alt="最
 
 
 
-==== 平衡二叉查找树
+=== 平衡二叉查找树
 
-image::images/array_to_bst.png[title="二叉搜索树对比", alt="二叉搜索树对比", width="95%"]
+image::array_to_bst.png[title="二叉搜索树对比", alt="二叉搜索树对比", width="95%"]
 
 平衡二叉搜索树在添加元素时，通过旋转来保证自身的平衡性。
 
-image::images/tree_balance.png[title="平衡二叉搜索树旋转", alt="平衡二叉搜索树旋转", width="95%"]
+image::tree_balance.png[title="平衡二叉搜索树旋转", alt="平衡二叉搜索树旋转", width="95%"]
 
 不仅能左旋，还可以右旋。左右旋转示意图：
 
-image::images/search_tree_rotation.png[title="二叉搜索树旋转", alt="二叉搜索树旋转", width="95%"]
+image::search_tree_rotation.png[title="二叉搜索树旋转", alt="二叉搜索树旋转", width="95%"]
 
 
 [TIP]
@@ -312,14 +312,14 @@ image::images/search_tree_rotation.png[title="二叉搜索树旋转", alt="二�
 ====
 
 
-==== B+Tree
+=== B+Tree
 
 为了解决高效查找某一个范围内的元素的问题，我们引入一个修订后的树：B+树。这也是目前大部分现代数据库索引使用的数据结构。在一个B+树里：
 
 * 只有最底层的节点（叶子节点）才保存信息（相关表的行位置）
 * 其它节点只是在搜索中用来指引到正确节点的。
 
-image::images/binaray_plus_tree.png[title="B+Tree 索引结构", alt="B+Tree 索引结构", width="95%"]
+image::binaray_plus_tree.png[title="B+Tree 索引结构", alt="B+Tree 索引结构", width="95%"]
 
 找到了 M 个后续节点，树总共有 N 个节点。对指定节点的搜索成本是 log(N)，跟上一个树相同。但是当你找到这个节点，你得通过后续节点的连接得到 M 个后续节点，这需要 M 次运算。那么这次搜索只消耗了 M+log(N) 次运算，区别于上一个树所用的 N 次运算。
 
@@ -333,7 +333,7 @@ WARNING: B+树种的 B 不是代表二叉（binary），而是代表平衡（bal
 ====
 
 
-==== 哈希表
+=== 哈希表
 
 为了构建一个哈希表，你需要定义：
 
@@ -341,7 +341,7 @@ WARNING: B+树种的 B 不是代表二叉（binary），而是代表平衡（bal
 * 关键字的哈希函数。关键字计算出来的哈希值给出了元素的位置（叫做哈希桶）。
 * 关键字比较函数。一旦你找到正确的哈希桶，你必须用比较函数在桶内找到你要的元素。
 
-image::images/hash_table.jpg[title="哈希表", alt="哈希表", width="95%"]
+image::hash_table.jpg[title="哈希表", alt="哈希表", width="95%"]
 
 *真正的挑战是找到好的哈希函数，让哈希桶里包含非常少的元素。如果有了好的哈希函数，在哈希表里搜索的时间复杂度是 O(1)。*
 
@@ -353,26 +353,26 @@ Hash查找有什么问题吗？
 ====
 
 
-=== InnoDB 逻辑存储结构。
+== InnoDB 逻辑存储结构。
 
 所有数据都被逻辑地存放在一个空间中，称为表空间（tablespace）。表空间由段（segment）、区（extent）、页（page）组成。页在一些文档中有时也被称为块（block）。大致结构如下：
 
-image::images/InnoDB_logical_storage_structure.png[title="InnoDB 逻辑存储结构", alt="InnoDB 逻辑存储结构", width="95%"]
+image::InnoDB_logical_storage_structure.png[title="InnoDB 逻辑存储结构", alt="InnoDB 逻辑存储结构", width="95%"]
 
-==== 行
+=== 行
 
 InnoDB 存储引擎是面向列的（row-oriented），也就是说数据是按行进行存放的。每个页存放的行记录是有硬性定义的，最多允许存放 16KB / 2-200 行的记录，即 7992 行记录。
 
-=== 索引基础
+== 索引基础
 
 索引类似书籍目录。
 
 在MySQL 中，索引是在存储引擎层而不是服务器层实现的。
 
-==== 索引类型
+=== 索引类型
 
 
-===== B-Tree 索引
+==== B-Tree 索引
 
 大部分 MySQL 引擎都支持 B-Tree 索引。
 
@@ -384,11 +384,11 @@ MyISAM 索引通过数据的物理位置引用被索引的行，而 InnoDB 则�
 
 B-Tree 通常以为这所有的值都是按顺序存储的，并且每一个叶子页到根的距离相同。如下图：
 
-image::images/B-Tree_index.png[title="B-Tree 索引结构", alt="B-Tree 索引结构", width="95%"]
+image::B-Tree_index.png[title="B-Tree 索引结构", alt="B-Tree 索引结构", width="95%"]
 
 B-Tree 索引能够加快访问数据的速度，因为存储引擎不再需要进行全表扫描来获取需要的数据，取而代之的是从索引的根节点开始进行搜索。
 
-image::images/binaray_plus_tree_2.png[title="B-Tree 索引结构概图", alt="B-Tree 索引结构概图", width="95%"]
+image::binaray_plus_tree_2.png[title="B-Tree 索引结构概图", alt="B-Tree 索引结构概图", width="95%"]
 
 WARNING: 问：索引的根节点的值变还是不变？
 
@@ -413,7 +413,7 @@ CREATE TABLE people (
 
 三个列组成的联合索引的结构如下：
 
-image::images/B-Tree_unified_index.png[title="B-Tree 联合索引", alt="B-Tree 联合索引", width="95%"]
+image::B-Tree_unified_index.png[title="B-Tree 联合索引", alt="B-Tree 联合索引", width="95%"]
 
 注意：索引对多个值进行排序的依据是 `CREATE TABLE` 语句中定义索引时列的顺序。
 
@@ -440,7 +440,7 @@ B-Tree 索引的限制：
 B+树索引并不能找到一个给定键值的具体行。B+树索引能找到的只是被查找数据行所在的页。然后数据库通过把页读入到内存，再在内存中进行查找，最后得到要查找的数据。
 
 
-===== 哈希索引
+==== 哈希索引
 
 哈希索引（hash index）基于哈希表实现，只有精确匹配查询索引所有列的查询才有效。
 
@@ -569,13 +569,13 @@ SELECT CONV(RIGHT(MD5('http:\/\/www.diguage.com/'), 16), 16, 10) AS hash64;
 ----
 
 
-===== 空间数据索引（R-Tree）
+==== 空间数据索引（R-Tree）
 
 MyISAM 表支持空间索引，可以用作地理数据存储。空间索引会从所有唯独来索引数据。查询时，可以有效地使用任意维度来组合查询。必须使用 MySQL 的 GIS 相关函数如 `MBRCONTAINS()` 等来维护数据。
 
 开源关系数据库系统中对 GIS 的解决方案做得比较好的是 PostgreSQL 的 PostGIS。
 
-===== 全文索引
+==== 全文索引
 
 全文索引时一种特殊类型的索引，它查找的是文本中的关键词，而不是直接比较索引中的值。
 
@@ -583,13 +583,13 @@ MyISAM 表支持空间索引，可以用作地理数据存储。空间索引会�
 
 全文索引适用于 `MATCH AGAINST` 操作，而不是普通的 `WHERE` 条件查询。
 
-===== 分形树索引（fractal tree index）
+==== 分形树索引（fractal tree index）
 
 这是一类比较新开发的数据结构，既有 B-Tree 的很多优点，也避免了 B-Tree 的一些缺点。
 
 
 
-=== 索引的优点
+== 索引的优点
 
 索引可以快速定位到表的指定位置；可以用作 `ORDER BY` 和 `GROUP BY` 操作；某些查询只使用索引就能够完成全部查询。
 
@@ -619,11 +619,11 @@ Tapio Lahdenmaki 和 Michael Leach 在书中介绍了如何评价一个索引是
 对于 TB 级别的数据，定位单条记录的意义不大，所以需要经常会使用块级别元数据技术来替代索引。
 ****
 
-=== 高性能的索引策略
+== 高性能的索引策略
 
 正确地创建和使用索引时实现高性能查询的基础。
 
-==== 独立的列
+=== 独立的列
 
 “独立的列”是指索引列不能是表达式的一部分，也不能是函数的参数。
 
@@ -673,7 +673,7 @@ possible_keys: PRIMARY
         Extra: Using index
 ----
 
-==== 前缀索引和索引选择性
+=== 前缀索引和索引选择性
 
 当索引很长的字符列，会让索引变得大且慢，一个策略是前面提到过的模拟哈希索引。
 
@@ -786,7 +786,7 @@ ALTER TABLE city
 NOTE: 有时后缀索引(suffix index)也有用途。 MySQL 原生不支持反向索引，但可以把字符串反转后存储，并基于此建立前缀索引。可以通过触发器来维护这种索引。
 
 
-==== 多列索引
+=== 多列索引
 
 一个常见的错误就是，为每个列创建独立的索引，或者按照错误的顺序创建多列索引。
 
@@ -874,7 +874,7 @@ possible_keys: PRIMARY,idx_fk_film_id
 如果在 `EXPLAIN` 中看到有索引合并，应该好好检查一下查询和表的结构，看是不是已经是最优的。
 
 [[choose-index-fields-sequence]]
-==== 选择合适的索引列顺序
+=== 选择合适的索引列顺序
 
 最容易引起困惑的问题就是索引列的顺序。正确的顺序依赖于使用该索引的查询，并且同时需要考虑如何更好地满足排序和分组的需要。本节内容适用于 B-Tree 索引。
 
@@ -935,13 +935,13 @@ FROM payment;
 尽管关于选择性和基数的经验法则值得去研究和分析，但一定要记住别忘了 `WHERE` 子句中的排序、分组和范围条件等其他因素，这些因素可能对查询的性能早晨非常大的影响。
 
 
-==== 聚簇索引
+=== 聚簇索引
 
 聚簇索引并不是一种单独的索引类型，而是一种数据存储方式。InnoDB 的聚簇索引实际上在同一结构中保存了 B-Tree 索引和数据行。
 
 当表有聚簇索引时，它的数据行实际上存放在索引的叶子页（leaf page）中。术语“聚簇”表示数据行和相邻的键值紧凑地存储在一起。因此，一个表只有一个聚簇索引（不过，覆盖索引可以模拟多个聚簇索引的情况）。
 
-image::images/clustered_index_data.png[title="聚簇索引的数据分布", alt="聚簇索引的数据分布", width="95%"]
+image::clustered_index_data.png[title="聚簇索引的数据分布", alt="聚簇索引的数据分布", width="95%"]
 
 InnoDB 通过主键聚集数据。如果没有定义主键， InnoDB 会选择一个唯一的非空索引代替；如果没有这样的索引， InnoDB 会隐式定义哥主键来作为聚簇索引。
 
@@ -963,7 +963,7 @@ InnoDB 通过主键聚集数据。如果没有定义主键， InnoDB 会选择�
 
 二级索引叶子节点保存的不是指向行的物理位置的指针，而是行的主键值。二级索引要两次 B-Tree 查找而不是一次，对于 InnoDB，自适应哈希索引能够减少这样的重复工作。_为什么能减少？_
 
-===== InnoDB 和 MyISAM 的数据分布对比
+==== InnoDB 和 MyISAM 的数据分布对比
 
 为了方便讲解，分别使用 InnoDB 和 MyISAM 引擎建立结构如下的表，并按主键随机顺序插入主键值在 1 ~ 10000 的10000条数据：
 
@@ -982,20 +982,20 @@ CREATE TABLE layout_test (
 
 MyISAM 按照数据插入的顺序存储在磁盘上。如图：
 
-image::images/MyISAM_data_layout.png[title="MyISAM 表 layout_test 的数据分布", alt="MyISAM 表 layout_test 的数据分布", width="95%"]
+image::MyISAM_data_layout.png[title="MyISAM 表 layout_test 的数据分布", alt="MyISAM 表 layout_test 的数据分布", width="95%"]
 
 在行旁边显示了行号，从 0 开始递增。因为行是定长的，所以 MyISAM 可以从表的开头跳过所需要的字节找到需要的行。（MyISAM 是根据定长还是变长的行使用不同策略来确定行号。）
 
-image::images/MyISAM_primary_key_layout.png[title="MyISAM 表 layout_test 的主键索引分布", alt="MyISAM 表 layout_test 的主键索引分布", width="95%"]
+image::MyISAM_primary_key_layout.png[title="MyISAM 表 layout_test 的主键索引分布", alt="MyISAM 表 layout_test 的主键索引分布", width="95%"]
 
 这里有两点需要注意：
 
 . 主键叶子节点存放的指向数据行的指针。
 . 主键和其他索引没有什么区别。
 
-image::images/MyISAM_primary_key_layout_2.png[title="MyISAM 表 layout_test 的主键索引分布", alt="MyISAM 表 layout_test 的主键索引分布", width="95%"]
+image::MyISAM_primary_key_layout_2.png[title="MyISAM 表 layout_test 的主键索引分布", alt="MyISAM 表 layout_test 的主键索引分布", width="95%"]
 
-image::images/MyISAM_secondary_key_layout.png[title="MyISAM 表 layout_test 的二级索引分布", alt="MyISAM 表 layout_test 的二级索引分布", width="95%"]
+image::MyISAM_secondary_key_layout.png[title="MyISAM 表 layout_test 的二级索引分布", alt="MyISAM 表 layout_test 的二级索引分布", width="95%"]
 
 事实上， MyISAM 中主键索引和其他索引在结构上没有什么不同。主键索引就是一个名为 PRIMARY 的唯一非空索引。
 
@@ -1003,13 +1003,13 @@ image::images/MyISAM_secondary_key_layout.png[title="MyISAM 表 layout_test 的�
 
 InnoDB 支持聚簇索引，所以使用不同的方式存储同样的数据。
 
-image::images/InnoDB_primary_key_layout.png[title="InnoDB 表 layout_test 的主键索引分布", alt="InnoDB 表 layout_test 的主键索引分布", width="95%"]
+image::InnoDB_primary_key_layout.png[title="InnoDB 表 layout_test 的主键索引分布", alt="InnoDB 表 layout_test 的主键索引分布", width="95%"]
 
 注意：该图显示了整个表，而不是只有索引。在 InnoDB 中，聚簇索引“就是”表。
 
 聚簇索引的每一个叶子节点都包含了主键值、事务 ID、用于事务和 MVCC 的回滚指针以及所有的剩余列。如果主键是一个列前缀索引， InnoDB 也会包含完整的主键列和剩下的其他列。
 
-image::images/InnoDB_primary_key_layout_2.png[title="InnoDB 表 layout_test 的主键索引分布", alt="InnoDB 表 layout_test 的主键索引分布", width="95%"]
+image::InnoDB_primary_key_layout_2.png[title="InnoDB 表 layout_test 的主键索引分布", alt="InnoDB 表 layout_test 的主键索引分布", width="95%"]
 
 NOTE: 前文说 InnoDB 把 `BLOB` 类型的会放在单独区域，如果主键是 `BLOB` 类型的列前缀索引，该如何存储？
 
@@ -1017,26 +1017,26 @@ InnoDB 的二级索引和聚簇索引很不相同。 InnoDB 二级索引的叶�
 
 TIP: 对比来看， MyISAM 在更新时，如果出现行移动，则要更新所有的二级索引的行指针。
 
-image::images/InnoDB_secondary_key_layout.png[title="InnoDB 表 layout_test 的二级索引分布", alt="InnoDB 表 layout_test 的二级索引分布", width="95%"]
+image::InnoDB_secondary_key_layout.png[title="InnoDB 表 layout_test 的二级索引分布", alt="InnoDB 表 layout_test 的二级索引分布", width="95%"]
 
 注意两点：
 
 . 每个叶子节点都包含了索引列，紧接着是主键索引。
 . 非叶子节点包含了索引列和一个指向下级节点的指针。这对聚簇索引和二级索引都是用。
 
-image::images/InnoDB_compare_MyISAM.png[title="聚簇和非聚簇表对比", alt="聚簇和非聚簇表对比", width="95%"]
+image::InnoDB_compare_MyISAM.png[title="聚簇和非聚簇表对比", alt="聚簇和非聚簇表对比", width="95%"]
 
-===== 在 InnoDB 表中按主键顺序插入行
+==== 在 InnoDB 表中按主键顺序插入行
 
 保证数据行是按顺序写入，对于根据主键做关联操作的性能也会更好。
 
 最好避免随机的（不连续且值的分布范围非常大）聚簇索引，特别是对于 I/O 密集型的应用。随机主键使得聚簇索引的插入变得完全随机，这是最坏的情况，使得数据没有任何聚集特性。
 
-image::images/InnoDB_order_insert.png[title="向聚簇索引插入顺序的索引值", alt="向聚簇索引插入顺序的索引值", width="95%"]
+image::InnoDB_order_insert.png[title="向聚簇索引插入顺序的索引值", alt="向聚簇索引插入顺序的索引值", width="95%"]
 
 因为主键的值时顺序的，所以 InnoDB 把每一条记录都存储在上一条记录的后面。当达到页的最大填充因子时（InnoDB 默认的最大填充因子是页大小的 15/16，留出部分空间用于以后修改），下一条记录都会写入新的页中。一旦数据按照这种顺序的方式加载，主键页就会近似于被顺序的记录填满。
 
-image::images/InnoDB_random_insert.png[title="向聚簇索引插入无序的索引值", alt="向聚簇索引插入无序的索引值", width="95%"]
+image::InnoDB_random_insert.png[title="向聚簇索引插入无序的索引值", alt="向聚簇索引插入无序的索引值", width="95%"]
 
 因为主键值不一定比之前插入的大，所以 InnoDB 无法简单地总是把新行插入到索引的最后，而是需要为新的行寻找合适的位置 -- 通常是已有数据的中间位置 -- 并且分开空间。这会增加很多额外的工作，并导致数据分布不够优化。缺点：
 
@@ -1058,7 +1058,7 @@ image::images/InnoDB_random_insert.png[title="向聚簇索引插入无序的索�
 可否只从索引中取数据而不回表？
 ====
 
-==== 覆盖索引
+=== 覆盖索引
 
 设计优秀的索索引应该考虑到整个查询，而不单单是 `WHERE` 条件部分。
 
@@ -1119,7 +1119,7 @@ TIP: 以前觉得写 SQL 语句就是个技术活，现在来看，它还是一�
 ****
 
 
-==== 使用索引扫描来做排序
+=== 使用索引扫描来做排序
 
 MySQL 有两种方式可以生成有序的结果：通过排序操作；或者按索引顺序扫描。
 
@@ -1133,7 +1133,7 @@ TIP: 如果需要安装不同方向做排序，一个技巧是存储该列值的
 
 使用索引做排序的一个最重要的用法是当查询同时有 `ORDER BY` 和 `LIMIT` 子句的时候。
 
-==== 压缩（前缀压缩）索引
+=== 压缩（前缀压缩）索引
 
 MyISAM 使用前缀压缩来减少索引的大小，可让更多索引放入内存中，某些情况可以极大提高性能。默认只压缩字符串，通过参数设置可以对整数做压缩。
 
@@ -1145,7 +1145,7 @@ MyISAM 压缩每个索引块的方法是，先完全保存索引块中的第一�
 
 可以在 `CREATE TABLE` 语句汇总指定 `PACK_KEYS` 参数来控制索引压缩的方式。
 
-==== 冗余和重复索引
+=== 冗余和重复索引
 
 重复索引指在相同的列上按照相同的顺序创建的相同类型的索引。
 
@@ -1166,7 +1166,7 @@ MySQL 的唯一限制和主键限制都是通过索引实现的。
 在决定哪些索引可以被删除的时候要非常小心。要考虑查询、排序等。可以使用 Percona 工具箱中的 `pt-upgrade` 工具来检查计划中的索引变更。
 
 
-==== 未使用的索引
+=== 未使用的索引
 
 除了冗余索引和重复索引，可能还会有一些服务器永远不用的索引，完全是累赘，建议考虑删除。
 
@@ -1174,7 +1174,7 @@ MySQL 的唯一限制和主键限制都是通过索引实现的。
 * Percona Toolkit 的  `pt-index-usage` 读取查询日志，并对日志中的查询进行 `EXPLAIN` 查找，然后打印出关于索引和查询的报告。
 
 
-==== 索引和锁
+=== 索引和锁
 
 索引可以让查询锁定更少的行。锁定超过需要的行会增加锁争用并减少并发性。
 
@@ -1183,15 +1183,15 @@ InnoDB 只有在访问行的时候才会对其加锁，而索引能够减少 Inn
 InnoDB 在二级索引上使用共享（读）锁，但访问主键索引需要排他（写）锁。
 
 
-=== 三星索引实战
+== 三星索引实战
 
-==== 定义
+=== 定义
 
 . **如果与一个查询相关的索引行是相邻的，或者至少相距足够靠近的话**，那这个索引就可以被标记上第一颗星。__这最小化了必须扫描的索引片的宽度。__
 . **如果索引行的顺序与查询语句的需求一致**，则索引可以被标记上第二颗星。__这排除了排序操作。__
 . **如果索引行包含查询语句中的所有列**，那么索引就可以被标记上第三颗星。完全符合三星就是“覆盖索引”。将一个列排除在索引之外可能会导致许多速度较慢的磁盘随机读。
 
-==== 实践出真知
+=== 实践出真知
 
 现在有表如下：
 
@@ -1302,7 +1302,7 @@ FROM cust;
 
 *结合 MySQL InnoDB 引擎的自身特性，`(city_id, last_name, first_name, cust_id)` 是最佳方案吗？为什么？*
 
-==== 范围谓词与三星索引
+=== 范围谓词与三星索引
 
 下面，来看一下带有范围谓词的示例：
 
@@ -1331,16 +1331,16 @@ ORDER BY first_name;
 
 具体选择，就要看业务需求。
 
-==== 设计最佳索引的算法
+=== 设计最佳索引的算法
 
-===== 候选A -- 选择最窄的索引片
+==== 候选A -- 选择最窄的索引片
 
 . 取出对于优化器来说不算过分复杂的**等值谓词列**，作为索引的前导列 -- 以任意顺序皆可。
 . 将选择性最好的范围谓词作为索引的下一列，如果存在的话；
 . 以正确的顺序添加 `ORDER BY` 列（如果 `ORDER BY` 列有 `DESC` 的话，加上 `DESC`。）；
 . 以任意顺序将 `SELECT` 语句中其余的列添加至索引中（但是需要以不易变的列开始）。
 
-===== 候选B -- 避免排序
+==== 候选B -- 避免排序
 
 . 取出对于优化器来说不过分复杂的等值谓词列，作为索引的前导列 -- 以任意顺序皆可。
 . 以正确的顺序添加 `ORDER BY` 列（如果 `ORDER BY` 列有 `DESC` 的话，加上 `DESC`。）；
@@ -1348,7 +1348,7 @@ ORDER BY first_name;
 
 *如果结果集很大的话，为了产生第一页的数据，二星索引后续A（需要排序）可能会花费非常长的时间。*
 
-=== 设计出色索引的九个步骤
+== 设计出色索引的九个步骤
 
 . 当表结构第 1 版设计（主键、外键、表行顺序）完成时，就开始创建第 0 版的索引：主键索引、外键索引及候选键索引（如果有的话）。
 . 对第 1 版表结构设计的性能表现进行检查：使用 QUBE 评估一些负载事务和批处理程序在理想索引下的响应时间。若评估结果无法满足要求，则将那些具有 1:1 或者 1:C (1对0或1)关系的表进行合并，同时将冗余数据添加至有 1:M (一对多)关系的依赖表中。
@@ -1365,15 +1365,15 @@ ORDER BY first_name;
 . 当生产系统正式投入使用后，需要针对首个高峰时段生成一个 LRT 级别的异常报告（尖刺报告或类似的报告）。若一个响应时间问题并非由排队或优化器问题引起，那么你应该用第 5 步中的方法进行处理。
 . 至少每周生成一个 LRT 级别的异常报告。
 
-=== 索引案例学习
+== 索引案例学习
 
 第一件需要考虑的事情是需要使用索引来排序，还是先检索数据再排序。使用索引排序会严格限制索引和查询的设计。
 
-==== 支持多种过滤条件
+=== 支持多种过滤条件
 
 需要看看哪些列拥有很多不同的取值，哪些列在 `WHERE` 子句中出现得最频繁。有更多不同值的列上创建索引的选择性会更好。
 
-=== 维护索引和表
+== 维护索引和表
 
 维护表有三个主要目的：
 
@@ -1381,7 +1381,7 @@ ORDER BY first_name;
 . 维护准确的索引统计信息。
 . 减少碎片。
 
-==== 找到并修复损坏的表
+=== 找到并修复损坏的表
 
 损坏的索引导会导致查询返回错误的结果或者莫须有的主键冲突等问题，严重时甚至还会导致数据库的崩溃。
 
@@ -1395,7 +1395,7 @@ ORDER BY first_name;
 
 如果遇到数据损坏，最重要的是找出是什么导致了损坏，而不只是简单地修复，否则很有可能还会不断损坏。
 
-==== 更新索引统计信息
+=== 更新索引统计信息
 
 * `records_in_range()` 通过向存储引擎传入两个边界值获取在这个范围大概有多少记录。
 * `info()` 返回各种类型的数据，包括索引的基数（每个键值有多少条记录）。
@@ -1410,7 +1410,7 @@ InnoDB 的统计信息值得深入研究。 InnoDB 引擎通过抽样的方式�
 
 InnoDB 会在表首次打开，或者执行 `ANALYZE TABLE`，抑或表的大小发生非常大的变化时计算索引的统计信息。
 
-==== 减少索引和数据的碎片
+=== 减少索引和数据的碎片
 
 B-Tree 索引可能会碎片化，这会降低查询的效率。碎片化的索引可能会以很差或者无序的方式存储在磁盘上。
 
@@ -1435,7 +1435,7 @@ B-Tree 索引可能会碎片化，这会降低查询的效率。碎片化的索�
 ALTER TABLE <table> ENGINE=<engine>;
 ----
 
-=== 总结
+== 总结
 
 在选择索引和编写利用这些索引的查询时，有三个原则始终需要记住：
 
