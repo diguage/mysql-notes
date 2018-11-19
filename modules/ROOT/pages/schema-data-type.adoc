@@ -1,4 +1,5 @@
 = Schema 设计
+include::_attributes.adoc[]
 
 良好的逻辑设计和物理设计是高性能的基石。
 

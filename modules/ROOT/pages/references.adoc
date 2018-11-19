@@ -1,5 +1,6 @@
 [appendix]
 = 参考资料
+include::_attributes.adoc[]
 
 * https://book.douban.com/subject/23008813/[高性能MySQL] -- 很明显，这个文档就是这本书的读书笔记。😆
 * https://book.douban.com/subject/24708143/[MySQL技术内幕] -- 和上面的那本参考看更爽。

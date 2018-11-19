@@ -1,4 +1,5 @@
 = 索引背后的故事
+include::_attributes.adoc[]
 
 
 == 从问题入手
