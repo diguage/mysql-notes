@@ -1,4 +1,6 @@
 name: mysql
 title: MySQL 学习笔记
-version: alpha
+version: latest
 start_page: index.adoc
+nav:
+- modules/ROOT/nav.adoc

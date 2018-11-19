@@ -1,0 +1,8 @@
+* xref:index.adoc[]
+* xref:preface.adoc[]
+* xref:schema-data-type.adoc[]
+* xref:high-performance-index.adoc[]
+* xref:query-optimization.adoc[]
+* xref:explain-in-detail.adoc[]
+* xref:explain-in-practice.adoc[]
+* xref:references.adoc[]
