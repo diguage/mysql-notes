@@ -102,6 +102,7 @@ include::_attributes.adoc[]
 
 ----
 
+[[explain-syntax]]
 == `EXPLAIN` 语法
 
 `DESCRIBE` 和 `EXPLAIN` 是同义词。在实践中，`DESCRIBE` 多用于显示表结构，而 `EXPLAIN` 多用于显示 SQL 语句的执行计划。
@@ -148,7 +149,8 @@ WHERE m.city_id IN (1, 2, 3, 4) ;
 
 
 
-== `explain` 输出
+[[explain-output]]
+== `EXPLAIN` 输出
 
 === `select_type`
 

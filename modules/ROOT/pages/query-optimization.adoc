@@ -4,6 +4,7 @@ include::_attributes.adoc[]
 查询优化、索引优化、库表结构优化需要齐头并进，一个不落。
 
 
+[[query-slow-query]]
 == 为什么查询速度会慢？
 
 真正重要的是响应时间。
@@ -12,6 +13,7 @@ include::_attributes.adoc[]
 
 了解查询的生命周期、清楚查询的时间消耗情况对于优化查询有很大的意义。
 
+[[query-optimize-data-access]]
 == 慢查询基础：优化数据访问
 
 查询性能低下最基本的原因是访问的数据太多。
@@ -159,6 +161,7 @@ possible_keys: NULL
 * 改变库表结构。例如使用单独的汇总表。
 * 重写这个复杂的查询，让 MySQL 优化器能够以更优化的方式执行这个查询。
 
+[[query-refactor-query]]
 == 重构查询的方式
 
 在优化有问题的查询时，目标应该是找到一个更优的方法获取实际需要的结果--而不一定总是需要从 MySQL 获取一模一样的结果集。
@@ -193,6 +196,7 @@ TIP: 这个原则不仅仅适用于数据库，在很多地方都适用。
 * 可以减少冗余记录的查询。
 * 这样做相当于在应用中实现了哈希关联，而不是使用 MySQL 的嵌套循环关联。某些场景哈希关联的效率要高很多。
 
+[[query-execution-basis]]
 == 查询执行的基础
 
 当希望 MySQL 能够以更高的性能运行查询时，最好的办法就是弄清楚 MySQL 是如何优化和执行查询的。
@@ -649,6 +653,7 @@ TIP: 从这句话中也可以看出，如果可以，尽量使用一张表中的
 MySQL 将结果集返回客户端是一个增量、逐步返回的过程。
 
 
+[[query-optimizer-limitations]]
 == MySQL 查询优化器的局限性
 
 MySQL 的万能“嵌套循环”并不是对每种查询都是最优的。MySQL 查询优化器只对少部分查询不适用，往往可以通过改写查询让 MySQL 高效地完成工作。
@@ -902,6 +907,7 @@ SET tbl.cnt = der.cnt; -- <2>
 <2> 通过使用生成表的形式来绕过上面的限制。
 
 
+[[query-optimizer-hint]]
 == 查询优化器的提示（hint）
 
 如果对查询优化器选择的执行计划不满意，可以使用优化器提供的几个提示来控制最终的执行计划。
@@ -960,6 +966,8 @@ optimizer_switch::
 使用 Percona Toolkit 中的 `pt-upgrade` 工具，就可以检查在新版中运行的 SQL 是否与老版本一样，返回相同的结果。
 ****
 
+
+[[query-optimize-specific-queries]]
 == 优化特定类型的查询
 
 === 优化 `COUNT()` 查询
@@ -1302,6 +1310,7 @@ WHERE (@found := NULL) IS NOT NULL;
 
 推荐阅读 https://book.douban.com/subject/26665768/[SQL and Relational Theory]，改变对 SQL 语句的认识。
 
+[[query-case-study]]
 == 案例学习
 
 _待补充_
@@ -1312,6 +1321,7 @@ _待补充_
 
 === 使用用户定义函数
 
+[[query-summary]]
 == 总结
 
 要想写一个好的查询，你必须理解 Schema 设计、索引设计等，反之亦然。

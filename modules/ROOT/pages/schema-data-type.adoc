@@ -3,6 +3,7 @@ include::_attributes.adoc[]
 
 良好的逻辑设计和物理设计是高性能的基石。
 
+[[schema-data-type]]
 == 数据类型的选择
 
 . 更小的通常更好
@@ -238,6 +239,7 @@ UUID 值还是有一定的顺序的。
 * 低于秒级精度的时间戳
 * IPv4 地址 -- `INET_ATON()` 和 `INET_NTOA()`。
 
+[[schema-design-trap]]
 == MySQL Schema 设计中的陷阱
 
 太多的列:: MySQL 的存储引擎 API 工作时需要在服务器层和存储引擎层之间通过行缓冲格式拷贝数据，然后在服务器层将缓冲内容解码成各个列。从行缓冲中将解码过的列转换成行数据结构的操作代价是非常高的。 MyISAM 定长行结构正好匹配，不需要转换。MyISAM 的变长行结构和 InnoDB 的行结构则总是需要转换。**转换的代价依赖于列的数量。**
@@ -246,6 +248,7 @@ UUID 值还是有一定的顺序的。
 变相的枚举:: 枚举列允许在列中存储一组定义值中的单个值，集合（ `SET` ）列则允许在列中存储一组定义值中的一个或多个值。比如: `CREATE TABLE set_test ( is_default SET ('Y', 'N') NOT NULL DEFAULT 'N' );` 真假只有一个，定义为枚举更好。
 非此发明的 NULL:: 建议不要存 NULL。但是不要走极端。当确实需要表示未知值时也不要害怕使用 NULL。处理 NULL 确实不容易，但有时候会比它的替代方案更好。
 
+[[schema-paradigm-and-antiparadigm]]
 == 范式和反范式
 
 第一范式:: 符合1NF的关系中的每个属性都不可再分。1NF是所有关系型数据库的最基本要求。
@@ -278,6 +281,7 @@ https://www.zhihu.com/question/24696366/answer/29189700[解释一下关系数据
 
 缓存衍生值也是有用的。
 
+[[schema-cache-and-summary-table]]
 == 缓存表和汇总表
 
 有时提升性能最好的方法是在同一张表中保存衍生的冗余数据；有时也需要创建一张完全独立的汇总表或缓存表。
@@ -363,6 +367,7 @@ DELETE FROM daily_hit_counter WHERE slot <> 0 AND cnt = 0;
 
 TIP: 为了提升度查询的速度，可以建立额外索引；这样会增加些查询的负担，虽然写的慢，但是更显著提高了读操作的性能。
 
+[[schema-speed-up-alter]]
 == 加快 `ALTER TABLE` 操作的速度
 
 MySQL 的 `ALTER TABLE` 操作的性能对于大表来说是个大问题。 MySQL 执行大部分修改表结构操作的方法是用新的结构创建一个空表，从旧表中查出所有数据插入新表，然后删除旧表。
@@ -421,6 +426,7 @@ ALTER TABLE load_data ENABLE KEYS;
 
 现代版本的 InnoDB 中有类似的技巧。
 
+[[schema-summary]]
 == 总结
 
 * 尽量避免过度设计；
