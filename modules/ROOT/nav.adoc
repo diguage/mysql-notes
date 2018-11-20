@@ -8,7 +8,7 @@
 ** xref:schema-data-type.adoc#schema-summary[总结]
 * xref:high-performance-index.adoc[索引背后的故事]
 ** xref:high-performance-index.adoc#index-question[从问题入手]
-** xref:high-performance-index.adoc#index-basic-principle追本溯源[]
+** xref:high-performance-index.adoc#index-basic-principle[追本溯源]
 ** xref:high-performance-index.adoc#index-innodb-logical-storage-structure[InnoDB 逻辑存储结构]
 ** xref:high-performance-index.adoc#index-basis[索引基础]
 ** xref:high-performance-index.adoc#index-advantage[索引的优点]
