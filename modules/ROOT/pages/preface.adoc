@@ -1,5 +1,5 @@
 [preface]
-= MySQL 学习笔记^Alpha^
+= 前言
 include::_attributes.adoc[]
 
 *本笔记还没有完成，现在还处于 Alpha 版，后续还会持续更新。*
