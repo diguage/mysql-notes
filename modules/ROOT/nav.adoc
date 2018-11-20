@@ -14,7 +14,7 @@
 ** xref:high-performance-index.adoc#index-advantage[索引的优点]
 ** xref:high-performance-index.adoc#index-high-performance-strategy[高性能的索引策略]
 ** xref:high-performance-index.adoc#index-three-star-index[三星索引实战]
-** xref:high-performance-index.adoc#index-step--to-design-good-index[设计出色索引的九个步骤]
+** xref:high-performance-index.adoc#index-step-to-design-good-index[设计出色索引的九个步骤]
 ** xref:high-performance-index.adoc#index-case-study[索引案例学习]
 ** xref:high-performance-index.adoc#index-maintain-index-table[维护索引和表]
 ** xref:high-performance-index.adoc#index-summary[总结]
