@@ -31,7 +31,5 @@
 * xref:explain-in-detail.adoc[explain 详解]
 ** xref:explain-in-detail.adoc#explain-syntax[`EXPLAIN` 语法]
 ** xref:explain-in-detail.adoc#explain-output[`EXPLAIN` 输出]
-** xref:explain-in-detail.adoc#[]
-** xref:explain-in-detail.adoc#[]
 * xref:explain-in-practice.adoc[explain 实践]
 * xref:references.adoc[参考资料]
