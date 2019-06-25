@@ -25,6 +25,17 @@ Github 对 Asciidoctor 的支持不是特别完善，另外很多人可能没有
 | image:modules/ROOT/assets/images/alipay.jpeg[title="支付宝", alt="支付宝", width="60%"] | image:modules/ROOT/assets/images/wxpay.png[title="微信", alt="微信", width="65%"]
 |===
 
+== 亟需完善的内容
+
+. 事务的实现原理
+. 分形树（抱歉，我还没搞懂）
+. 索引优化实践
+. 索引优化实际案例分析
+. 分布式数据库
+.. 分库分表
+.. NewSQL
+.. 分布式事务
+
 == 免责声明
 
 本文档绝大部分内容是针对 MySQL 5.5 的，随着 MySQL 的发展，部分的内容可能会过时。所以，如有错误之处，还请以相应版本的官方文档为准！
