@@ -1,0 +1,8 @@
+[appendix]
+== 版权声明
+
+++++
+<pre>
+include::LICENSE[]
+</pre>
+++++

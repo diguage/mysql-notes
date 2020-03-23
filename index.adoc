@@ -1,0 +1,28 @@
+= MySQL 学习笔记^Alpha^
+D瓜哥 <https://www.diguage.com/>
+{docdate}
+include::_attributes.adoc[]
+
+++++
+include::analytics.htm[]
+++++
+
+:sectnums!:
+
+include::preface.adoc[]
+
+:sectnums:
+
+include::schema-data-type.adoc[]
+
+include::high-performance-index.adoc[]
+
+include::query-optimization.adoc[]
+
+include::explain-in-detail.adoc[]
+
+include::explain-in-practice.adoc[]
+
+include::references.adoc[]
+
+include::license.adoc[]

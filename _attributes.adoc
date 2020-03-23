@@ -1,0 +1,29 @@
+:stem: latexmath
+:doctype: book
+:icons: font
+// :source-highlighter: rouge
+// :rouge-style: monokai
+// :rouge-linenums-mode: table
+:source-highlighter: coderay
+:coderay-style: monokai
+:coderay-linenums-mode: table
+:source-language: sql  // 后面还可以覆盖
+:stylesdir: assets/styles/
+:linkcss:
+:docinfo:
+:toc-title: 目录
+:toclevels: 4
+:sectnumlevels: 4
+:preface-title: 前言
+:chapter-label: 章
+:appendix-caption: 附录
+:listing-caption: 代码
+:figure-caption: 图
+:version-label: V
+:pdf-page-size: A4
+:keywords: MySQL, InnoDB, MyISAM, 聚簇索引, 平衡二叉树, 优化, SQL, 数据库
+:description: MySQL 学习笔记。从数据库表结构设计，深入到索引的数据结构，最后以前面的知识做铺垫，讲解如何使用 explain 做 SQL 的查询优化。
+:last-update-label: 最后更新时间
+:homepage: http://www.diguage.com/
+
+:sql_source_attr: source,sql,linenums,subs="attributes,verbatim"

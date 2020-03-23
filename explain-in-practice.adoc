@@ -1,5 +1,4 @@
-= `EXPLAIN` 实践
-include::_attributes.adoc[]
+== `EXPLAIN` 实践
 
 如果 `EXPLAIN` 执行计划的 `Extra` 列包含 “Using temporary”，则说明这个查询使用了隐式临时表。
 
@@ -99,3 +98,6 @@ possible_keys: PRIMARY,idx_fk_film_id
 ----
 
 在 `EXPLAIN` 的 `Extra` 字段显示 “Using index for group-by”，表示这里将使用松散索引扫描。如果 MySQL 能写上 “loose index probe”，相信会更好理解。P231
+
+
+
