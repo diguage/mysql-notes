@@ -15,6 +15,8 @@ include::preface.adoc[]
 
 include::schema-data-type.adoc[]
 
+include::transaction.adoc[]
+
 include::high-performance-index.adoc[]
 
 include::query-optimization.adoc[]
