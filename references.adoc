@@ -17,3 +17,4 @@ include::_attributes.adoc[]
 * http://www.daenotes.com/electronics/digital-electronics/magnetic-bubble-memories[Magnetic Bubble Memories]
 * https://www.cs.uic.edu/~jbell/CourseNotes/OperatingSystems/10_MassStorage.html[Operating Systems: Mass-Storage Structure]
 * https://my.oschina.net/editorial-story/blog/839446[最受欢迎的 13 个数据库相关文章链接 - 编辑部的故事] -- 还没有读，把这些文章读一读，吸收到这个笔记里来。
+* https://blog.csdn.net/sinat_27564919/article/details/70808991[Mysql事务和隔离级别（read committed, repeatable read）_数据库_往事依稀浑似梦，都随风雨到心头！-CSDN博客]

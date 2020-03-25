@@ -9,7 +9,7 @@
 * **Isolation（隔离性）**：多个并发事务之间相互隔离，不能互相干扰。或者说一个事务所做的修改在最终提交以前，对其他事务是不可见的。
 * **Durablity（持久性）**：事务完成后，对数据库的更改是永久保存的，不能回滚。
 
-=== 数据库事务隔离级别
+=== 事务隔离级别
 
 Read Uncommitted(未提交读)::
 在 Read Uncommitted 级别，事务中的修改，即使没有提交，对其他事务也都是可见的。事务可以读取未提交的数据，这也被称为**脏读(Dirty Read)**。性能不会好太多，但是问题却一大堆，实际应用中一般很少使用。
@@ -24,6 +24,250 @@ Serializable(可串行化)::
 Serializable 是最高的隔离级别。它通过强制事务串行执行，避免了前面说的幻读问题。简单来说，Serializable 会在读取的每一行数据上都加锁，所以导致大量的超时和锁争用的问题。实际中，极少使用。
 
 Repeatable Read(可重复读) 是 MySQL 默认事务隔离级别。
+
+=== `Read Committed` vs `Repeatable Read`
+
+Read Committed(提交读，也称为不可重复读)和 Repeatable Read(可重复读)的区别在于，前者在本事务未提交之前其他事务的增删改操作提交后会影响读的结果。读的是最新结果。
+
+Repeatable Read(可重复读)在读的过程中数据始终是事务启动时的数据状态，未提交之前其他事物的增删改操作提交后都不会影响读的结果。读的是快照结果。
+
+[{sql_source_attr}]
+----
+CREATE TABLE `member`
+(
+    `id`       BIGINT(20) NOT NULL AUTO_INCREMENT,
+    `name`     VARCHAR(100) DEFAULT '',
+    `birthday` DATETIME     DEFAULT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+mysql> SELECT * FROM member;
++----+-----------------+---------------------+
+| id | name            | birthday            |
++----+-----------------+---------------------+
+|  1 | D瓜哥           | 2018-12-26 06:02:57 |
+|  2 | www.diguage.com | 2019-09-26 00:00:00 |
++----+-----------------+---------------------+
+----
+
+==== `READ COMMITTED` 更新操作
+
+. A 开始事务 
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit=0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+----
+<1> A 开启事务
++
+. A 第一次查询
++
+[{sql_source_attr}]
+----
+mysql> SELECT * FROM member;
++----+-----------------+---------------------+
+| id | name            | birthday            |
++----+-----------------+---------------------+
+|  1 | D瓜哥           | 2018-12-26 06:02:57 |
+|  2 | www.diguage.com | 2019-09-26 00:00:00 |
++----+-----------------+---------------------+
+2 rows in set (0.00 sec)
+----
++
+. B 开始事务，并查询修改，然后提交事务
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> UPDATE member <2>
+    -> SET name = 'https://www.diguage.com/'
+    -> WHERE id = 2;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> COMMIT; <3>
+Query OK, 0 rows affected (0.01 sec)
+----
+<1> B 开启事务
+<2> B 在事务中，更新数据
+<3> B 提交事务
++
+. A 再次查询，出现读不一致
++
+[{sql_source_attr}]
+----
+mysql> SELECT *
+    -> FROM member
+    -> WHERE id = 2;
++----+--------------------------+---------------------+
+| id | name                     | birthday            |
++----+--------------------------+---------------------+
+|  2 | https://www.diguage.com/ | 2019-09-26 00:00:00 |
++----+--------------------------+---------------------+
+1 row in set (0.00 sec)
+----
+
+==== `READ COMMITTED` 新增操作
+
+. A 开始事务 
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit=0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+----
+<1> A 开启事务
++
+. A 第一次查询
++
+[{sql_source_attr}]
+----
+mysql> SELECT *
+    -> FROM member;
++----+--------------------------+---------------------+
+| id | name                     | birthday            |
++----+--------------------------+---------------------+
+|  1 | D瓜哥                    | 2018-12-26 06:02:57 |
+|  2 | https://www.diguage.com/ | 2019-09-26 00:00:00 |
++----+--------------------------+---------------------+
+2 rows in set (0.00 sec)
+----
++
+. B 开始事务，并查询修改，然后提交事务
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> INSERT INTO member(name, birthday) <2>
+    ->     VALUE ('diguage', '2020-03-25 14:43:34');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> COMMIT; <3>
+Query OK, 0 rows affected (0.01 sec)
+----
+<1> B 开启事务
+<2> B 在事务中，新增数据
+<3> B 提交事务
++
+. A 再次查询，出现读不一致
++
+[{sql_source_attr}]
+----
+mysql> SELECT * FROM member;
++----+--------------------------+---------------------+
+| id | name                     | birthday            |
++----+--------------------------+---------------------+
+|  1 | D瓜哥                    | 2018-12-26 06:02:57 |
+|  2 | https://www.diguage.com/ | 2019-09-26 00:00:00 |
+|  3 | diguage                  | 2020-03-25 14:43:34 |
++----+--------------------------+---------------------+
+3 rows in set (0.00 sec)
+----
+
+==== `REPEATABLE READ` 更新操作
+
+. A 开始事务 
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit=0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+----
+<1> A 开启事务
++
+. A 第一次查询
++
+[{sql_source_attr}]
+----
+mysql> SELECT *
+    -> FROM member;
++----+--------------------------+---------------------+
+| id | name                     | birthday            |
++----+--------------------------+---------------------+
+|  1 | D瓜哥                    | 2018-12-26 06:02:57 |
+|  2 | https://www.diguage.com/ | 2019-09-26 00:00:00 |
+|  3 | diguage                  | 2020-03-25 14:43:34 |
++----+--------------------------+---------------------+
+3 rows in set (0.00 sec)
+----
++
+. B 开始事务，并查询修改，然后提交事务
++
+[{sql_source_attr}]
+----
+mysql> SET autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> BEGIN; <1>
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> UPDATE member <2>
+    -> SET name = 'https://github.com/diguage/'
+    -> WHERE id = 2;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> COMMIT; <3>
+Query OK, 0 rows affected (0.01 sec)
+----
+<1> B 开启事务
+<2> B 在事务中，更新数据
+<3> B 提交事务
++
+. B 更新后，A 再次查询，读取的仍是 B 没有改变的数据
++
+[{sql_source_attr}]
+----
+mysql> SELECT * FROM member;
++----+--------------------------+---------------------+
+| id | name                     | birthday            |
++----+--------------------------+---------------------+
+|  1 | D瓜哥                    | 2018-12-26 06:02:57 |
+|  2 | https://www.diguage.com/ | 2019-09-26 00:00:00 |
+|  3 | diguage                  | 2020-03-25 14:43:34 |
++----+--------------------------+---------------------+
+3 rows in set (0.00 sec)
+----
 
 === 实现原理
 
