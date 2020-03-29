@@ -10,7 +10,7 @@ include::_attributes.adoc[]
 
 [cols="2*^",frame=none]
 |===
-| image:assets/images/alipay.jpeg[title="支付宝", alt="支付宝", width="40%"] | image:assets/images/wxpay.png[title="微信", alt="微信", width="45%"]
+| image:assets/images/alipay.png[title="支付宝", alt="支付宝", width="45%"] | image:assets/images/wxpay.png[title="微信", alt="微信", width="45%"]
 |===
 
 === 官网及版本库
