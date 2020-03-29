@@ -255,7 +255,7 @@ UUID 值还是有一定的顺序的。
 
 // TODO: 回头再补
 
-https://www.zhihu.com/question/24696366/answer/29189700[解释一下关系数据库的第一第二第三范式？ - 刘慰的回答 - 知乎]
+https://www.zhihu.com/question/24696366/answer/29189700[解释一下关系数据库的第一第二第三范式？ - 刘慰的回答 - 知乎^]
 
 *范式化通常带来的好处：*
 
@@ -314,7 +314,7 @@ RENAME TABLE my_summary TO my_summary_old, my_summary_new TO my_summary;
 
 MySQL 并不原生支持物化视图。
 
-Justin Swanhart 的开源工具 Flexviews， https://github.com/greenlion/swanhart-tools[Swanhart Toolkit]。
+Justin Swanhart 的开源工具 Flexviews， https://github.com/greenlion/swanhart-tools[Swanhart Toolkit^]。
 
 ==== 计数器表
 
@@ -376,9 +376,9 @@ MySQL 的 `ALTER TABLE` 操作的性能对于大表来说是个大问题。 MySQ
 
 * 先在一台不提供服务的机器上执行 `ALTER TABLE` 操作，然后和提供服务的主库进行切换；
 * 影子拷贝：用要求的表结构创建一张和源表无关的新表，然后通过重命名和删表的操作交换两张表。还有一些第三方工具可以完成：
-** Facebook https://launchpad.net/mysqlatfacebook[online schema change]
-** Shlomi Noach http://code.openark.org[openark toolkit]
-** http://www.percona.com/software[Percona Toolkit]
+** Facebook https://launchpad.net/mysqlatfacebook[online schema change^]
+** Shlomi Noach http://code.openark.org[openark toolkit^]
+** http://www.percona.com/software[Percona Toolkit^]
 
 不是所有的 `ALTER TABLE` 操作都会引起表重建。
 

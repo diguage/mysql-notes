@@ -59,7 +59,7 @@ TIP: 可以写一个脚本来分析 MySQL 的日志，进而找出比较慢的�
 +
 一般最常见和重要的等待是 I/O 和锁等待。
 
-https://book.douban.com/subject/26419771/[数据库索引设计与优化] 一书讲述了一种估算查询的响应时间方法：快速上限估计。概括地说，了解这个查询需要哪些索引以及它的执行计划是什么，然后计算大概需要多少个顺序和随机 I/O，再用其乘以在具体硬件条件下一次 I/O 的消耗时间。最后把这些消耗都加起来，就可以获得一个大概参考值来判断当前响应时间是不是一个合理的值。
+https://book.douban.com/subject/26419771/[数据库索引设计与优化^] 一书讲述了一种估算查询的响应时间方法：快速上限估计。概括地说，了解这个查询需要哪些索引以及它的执行计划是什么，然后计算大概需要多少个顺序和随机 I/O，再用其乘以在具体硬件条件下一次 I/O 的消耗时间。最后把这些消耗都加起来，就可以获得一个大概参考值来判断当前响应时间是不是一个合理的值。
 
 
 [quote, Tapio Lahdenmaki & Michael Leach , '数据库索引设计与优化']
@@ -1308,7 +1308,7 @@ WHERE (@found := NULL) IS NOT NULL;
 * 模拟读/写游标。
 * 在 `SHOW` 语句的 `WHERE` 子句中加入变量值。
 
-推荐阅读 https://book.douban.com/subject/26665768/[SQL and Relational Theory]，改变对 SQL 语句的认识。
+推荐阅读 https://book.douban.com/subject/26665768/[SQL and Relational Theory^]，改变对 SQL 语句的认识。
 
 [[query-case-study]]
 === 案例学习
