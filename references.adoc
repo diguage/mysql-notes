@@ -18,3 +18,4 @@ include::_attributes.adoc[]
 * https://www.cs.uic.edu/~jbell/CourseNotes/OperatingSystems/10_MassStorage.html[Operating Systems: Mass-Storage Structure^]
 * https://my.oschina.net/editorial-story/blog/839446[最受欢迎的 13 个数据库相关文章链接 - 编辑部的故事^] -- 还没有读，把这些文章读一读，吸收到这个笔记里来。
 * https://blog.csdn.net/sinat_27564919/article/details/70808991[Mysql事务和隔离级别（read committed, repeatable read）_数据库_往事依稀浑似梦，都随风雨到心头！-CSDN博客^]
+* https://www.cnblogs.com/yubaolee/p/10398633.html[仅此一文让你明白事务隔离级别、脏读、不可重复读、幻读 - 李玉宝 - 博客园]

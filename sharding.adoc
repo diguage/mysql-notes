@@ -1,4 +1,4 @@
-== 分库分布分片
+== 分库分表分片
 
 === 问题分析
 
@@ -78,6 +78,10 @@
 //
 
 image::assets/images/route-architecture.png[title="路由规则", alt="路由规则", width="95%"]
+
+image::assets/images/rewrite-architecture_cn.png[title="改写规则", alt="改写规则", width="95%"]
+
+image::assets/images/execute-architecture_cn.png[title="改写规则", alt="改写规则", width="95%"]
 
 
 === 参考资料
