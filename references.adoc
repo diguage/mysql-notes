@@ -19,3 +19,8 @@ include::_attributes.adoc[]
 * https://my.oschina.net/editorial-story/blog/839446[最受欢迎的 13 个数据库相关文章链接 - 编辑部的故事^] -- 还没有读，把这些文章读一读，吸收到这个笔记里来。
 * https://blog.csdn.net/sinat_27564919/article/details/70808991[Mysql事务和隔离级别（read committed, repeatable read）_数据库_往事依稀浑似梦，都随风雨到心头！-CSDN博客^]
 * https://www.cnblogs.com/yubaolee/p/10398633.html[仅此一文让你明白事务隔离级别、脏读、不可重复读、幻读 - 李玉宝 - 博客园]
+* https://www.cnblogs.com/sxdcgaq8080/p/11844079.html[【mysql】Mysql的profile的使用 --- Profilling mysql的性能分析工具 - Angel挤一挤 - 博客园]
+* https://cloud.tencent.com/developer/article/1449108[MySQL 有效利用 profile 分析 SQL 语句的执行过程 - 云+社区 - 腾讯云]
+* https://www.jianshu.com/p/ea3fc71fdc45[MySQL EXPLAIN详解 - 简书]
+* https://segmentfault.com/a/1190000012629884[MySQL - EXPLAIN详解 - 个人文章 - SegmentFault 思否]
+* http://xiaorui.cc/archives/2754[浅谈mysql fulltext全文索引优缺点 – 峰云就她了]

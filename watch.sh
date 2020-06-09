@@ -9,6 +9,6 @@ if [ ! -n `which fswatch` ]; then
 fi
 
 # 不生效？
-httpd 1>/dev/null 2>&1 &
+# httpd 1>/dev/null 2>&1 &
 
-fswatch -o ${root_path}/*.adoc | xargs -n1  ${root_path}/deploy.sh
+fswatch -o ${root_path}/*.adoc | xargs -n1  ${root_path}/build.sh
