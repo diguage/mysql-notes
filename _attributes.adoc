@@ -27,3 +27,11 @@
 :homepage: http://www.diguage.com/
 
 :sql_source_attr: source,sql,linenums,subs="attributes,verbatim"
+
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]

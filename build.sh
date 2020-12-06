@@ -12,6 +12,7 @@ style_dir=assets/styles/
 # 确保 asciidoctor 命令被安装
 asciidoctor=`which asciidoctor`
 if [ ! -n `which asciidoctor` ]; then
+  echo "installing asciidoctor..."
   gem install asciidoctor
   asciidoctor=`which asciidoctor`
 fi
@@ -19,7 +20,12 @@ fi
 # 确保 wkhtmltopdf 命令被安装
 wkhtmltopdf=`which wkhtmltopdf`
 if [ ! -n `which wkhtmltopdf` ]; then
-  brew cask install wkhtmltopdf
+  echo "installing wkhtmltopdf..."
+  if [[ `uname` == Darwin* ]]; then
+    brew cask install wkhtmltopdf
+  else
+    sudo apt install -y wkhtmltopdf
+  fi
   wkhtmltopdf=`which wkhtmltopdf`
 fi
 
@@ -33,6 +39,7 @@ fi
 # 确保 cssnano 命令被安装
 cssnano=`which cssnano`
 if [ ! -n `which cssnano` ]; then
+  echo "installing cssnano..."
   npm install cssnano-cli --g --registry=https://registry.npm.taobao.org
   cssnano=`which cssnano`
 fi
@@ -40,6 +47,7 @@ fi
 # 确保 html-minifier 命令被安装
 htmlminifier=`which html-minifier`
 if [ ! -n `which html-minifier` ]; then
+  echo "installing html-minifier..."
   npm install html-minifier -g --registry=https://registry.npm.taobao.org
   htmlminifier=`which html-minifier`
 fi
