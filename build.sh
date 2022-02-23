@@ -75,16 +75,13 @@ done
 cd $base_dir
 
 # 把语法高亮提前
-$gsed -i "s/<\/head>/<link rel=\"stylesheet\" href=\"assets\/styles\/coderay-asciidoctor.css\"><\/head>/" $origin_html_file_name
+# $gsed -i "s/<\/head>/<link rel=\"stylesheet\" href=\"assets\/styles\/coderay-asciidoctor.css\"><\/head>/" $origin_html_file_name
 
 # 调整样式
-# $gsed -i "s/<\/head>/<style>a{text-decoration:none;}.img_bk{text-align:center;}<\/style><\/head>/" $origin_html_file_name
+$gsed -i "s/<\/head>/<style>a{text-decoration:none;}.img_bk{text-align:center;}<\/style><\/head>/" $origin_html_file_name
 
-# 替换 Font Awesome，(内置功能不能保证版本一致)
-# $gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs/\/\/cdn.bootcss.com/" $origin_html_file_name
-
-# 替换 Google Fonts
-# $gsed -i "s/https:\/\/fonts.googleapis.com/\/\/fonts.proxy.ustclug.org/" $origin_html_file_name
+# 替换 Font Awesome
+$gsed -i "s/https:\/\/cdnjs.cloudflare.com\/ajax\/libs\/font-awesome\/4.7.0\/css\/font-awesome.min.css/https:\/\/cdn.jsdelivr.net\/npm\/font-awesome@4.7.0\/css\/font-awesome.min.css/" $origin_html_file_name
 
 $htmlminifier -c html-minifier.config.json $origin_html_file_name -o $web_html_file_name
 
