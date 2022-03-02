@@ -4,6 +4,7 @@
   "collapseInlineTagWhitespace": true,
   "collapseWhitespace": true,
   "conservativeCollapse": true,
+  "html5": true,
   "keepClosingSlash": true,
   "processConditionalComments": true,
   "removeComments": true,
