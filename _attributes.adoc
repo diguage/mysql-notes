@@ -1,12 +1,11 @@
 :stem: latexmath
 :doctype: book
 :icons: font
-// :source-highlighter: rouge
-// :rouge-style: monokai
-// :rouge-linenums-mode: table
-:source-highlighter: coderay
-:coderay-style: monokai
-:coderay-linenums-mode: table
+:source-highlighter: rouge
+:rouge-style: github
+// :source-highlighter: coderay
+// :coderay-style: monokai
+// :coderay-linenums-mode: table
 :source-language: sql  // 后面还可以覆盖
 :stylesdir: assets/styles/
 :linkcss:

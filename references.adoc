@@ -1,3 +1,4 @@
+[#references]
 [appendix]
 = 参考资料
 include::_attributes.adoc[]

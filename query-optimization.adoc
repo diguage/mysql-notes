@@ -1,3 +1,4 @@
+[#query-optimization]
 == 查询性能优化
 include::_attributes.adoc[]
 

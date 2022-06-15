@@ -1,3 +1,4 @@
+[#high-performance-index]
 == 索引背后的故事
 include::_attributes.adoc[]
 
@@ -640,7 +641,7 @@ Tapio Lahdenmaki 和 Michael Leach 在书中介绍了如何评价一个索引是
 ----
 USE sakila;
 
-# 带数学计算的例子
+-- 带数学计算的例子
 EXPLAIN
 SELECT actor_id
 FROM actor
@@ -659,7 +660,7 @@ possible_keys: NULL
      filtered: 100.00
         Extra: Using where; Using index
 
-# 独立列
+-- 独立列
 EXPLAIN
 SELECT actor_id
 FROM actor
@@ -698,7 +699,7 @@ possible_keys: PRIMARY
 ----
 USE sakila;
 
-# 字符串长度统计
+-- 字符串长度统计
 SELECT
   CHAR_LENGTH(city) AS len,
   count(*)          AS cnt
@@ -735,7 +736,7 @@ ORDER BY len DESC;
 +-----+-----+
 
 
-# 字符串选择性
+-- 字符串选择性
 SELECT
   COUNT(DISTINCT LEFT(city, 2)) / COUNT(*) AS cit2,
   COUNT(DISTINCT LEFT(city, 3)) / COUNT(*) AS cit3,
@@ -753,7 +754,7 @@ FROM city;
 | 0.3133 | 0.7633 | 0.9383 | 0.9750 | 0.9900 | 0.9933 | 0.9933 | 0.9983 |
 +--------+--------+--------+--------+--------+--------+--------+--------+
 
-# 再对比一下不同长度字符的分布情况
+-- 再对比一下不同长度字符的分布情况
 SELECT
   count(*)      AS cnt,
   left(city, 2) AS pref
@@ -778,7 +779,7 @@ ORDER BY cnt DESC; -- <1>
 CREATE INDEX idx_city_pre6
   ON city (city(10)); -- <1>
 
-# 或
+-- 或
 ALTER TABLE city
   ADD KEY (city(6)); -- <1>
 ----
@@ -801,14 +802,14 @@ NOTE: 有时后缀索引(suffix index)也有用途。 MySQL 原生不支持反�
 .索引合并
 [{sql_source_attr}]
 ----
-# 不支持索引合并就需要做全表扫描
+-- 不支持索引合并就需要做全表扫描
 SELECT
   film_id,
   actor_id
 FROM film_actor
 WHERE film_id = 1 OR actor_id = 1;
 
-# 在支持索引合并前，只能这样优化
+-- 在支持索引合并前，只能这样优化
 EXPLAIN
 SELECT
   film_id,
@@ -849,7 +850,7 @@ possible_keys: PRIMARY,idx_fk_film_id
         Extra: Using where; Using index
 
 
-# 支持索引合并后
+-- 支持索引合并后
 EXPLAIN
 SELECT
   film_id,
@@ -1249,7 +1250,7 @@ WHERE last_name = 'CHOATE'
       AND city_id = 499
 ORDER BY first_name;
 
-# 查询已有的索引
+-- 查询已有的索引
 SHOW INDEX FROM cust;
 ----
 
@@ -1288,7 +1289,7 @@ SELECT
   count(DISTINCT city_id) / count(*)
 FROM cust;
 
-# 结果如下：
+-- 结果如下：
 +--------------------------------------+------------------------------------+
 | count(DISTINCT last_name) / count(*) | count(DISTINCT city_id) / count(*) |
 +--------------------------------------+------------------------------------+

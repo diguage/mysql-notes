@@ -1,9 +1,10 @@
+[#schema-data-type]
 == Schema 设计
 include::_attributes.adoc[]
 
 良好的逻辑设计和物理设计是高性能的基石。
 
-[[schema-data-type]]
+[#data-type]
 === 数据类型的选择
 
 . 更小的通常更好
@@ -104,21 +105,21 @@ WARNING: 变化的阈值是多少？
 .测试数据两端的空格保留情况
 [{sql_source_attr}]
 ----
-# 测试 CHAR
+-- 测试 CHAR
 DROP TABLE IF EXISTS char_test;
 CREATE TABLE char_test (char_col CHAR(10));
 
 INSERT INTO char_test VALUES ('string1'), ('   string2'), ('string3   ');
 
-SELECT CONCAT("'", char_col, "'") FROM char_test; # <1>
+SELECT CONCAT("'", char_col, "'") FROM char_test; -- <1>
 
-# 测试 VARCHAR
+-- 测试 VARCHAR
 DROP TABLE IF EXISTS varchar_test;
 CREATE TABLE varchar_test (varchar_col VARCHAR(10));
 
 INSERT INTO varchar_test VALUES ('string1'), ('   string2'), ('string3   ');
 
-SELECT CONCAT("'", varchar_col, "'") FROM varchar_test; # <1>
+SELECT CONCAT("'", varchar_col, "'") FROM varchar_test; -- <1>
 ----
 <1> 注意观察查询结果中字符串两边的空格变化。
 
@@ -157,13 +158,13 @@ MySQL 不能将 `BLOB` 和 `TEXT` 列全部长度的字符串进行索引。
 DROP TABLE IF EXISTS enum_test;
 CREATE TABLE enum_test (e ENUM ('fish', 'apple', 'dog'));
 
-INSERT INTO enum_test (e) VALUES ('fish'), ('dog'), ('apple'); # <1>
+INSERT INTO enum_test (e) VALUES ('fish'), ('dog'), ('apple'); -- <1>
 
 SELECT e + 0 FROM enum_test;
 
-SELECT e FROM enum_test ORDER BY e; # <2>
+SELECT e FROM enum_test ORDER BY e; -- <2>
 
-SELECT e FROM enum_test ORDER BY field(e, 'apple', 'dog', 'fish'); # <3>
+SELECT e FROM enum_test ORDER BY field(e, 'apple', 'dog', 'fish'); -- <3>
 ----
 <1> 三行数据实际存储为整数，而不是字符串。
 <2> 测试排序性

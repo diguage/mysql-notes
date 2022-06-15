@@ -1,3 +1,4 @@
+[#license]
 [appendix]
 == 版权声明
 

@@ -1,3 +1,4 @@
+[#explain-in-detail]
 == MySQL `explain` 详解
 include::_attributes.adoc[]
 
