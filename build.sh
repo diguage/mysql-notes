@@ -53,7 +53,8 @@ if [ ! -n `which html-minifier` ]; then
 fi
 
 # 删除以前的编译结果
-rm -rf *.html *.pdf 
+rm -rf *.html *.pdf
+ehco -e "\nremove the last processing result"
 # $style_dir
 
 ## Web ###########
@@ -73,11 +74,12 @@ cd ./$style_dir
 
 pwd
 
+echo -e "\ncompress css"
 for f in `ls .`
 do
   # 压缩 CSS
   $cssnano $f $f
-  echo -e "\ncompress $f"
+  echo -e "  $f"
 done
 
 cd $base_dir
@@ -94,7 +96,7 @@ do
 
   if [ "$f" != "./preface.html" ]; then
     # 增加打赏码
-    $gsed -i "s|<div id=\"content\">|<div id=\"content\"><div class=\"sect2\"><h3 id=\"_友情支持\">友情支持</h3><div class=\"paragraph\"><p>如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜</p></div><table class=\"tableblock frame-none grid-all stretch\"><colgroup><col style=\"width: 50%;\"><col style=\"width: 50%;\"></colgroup><tbody><tr><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/alipay.png\" alt=\"支付宝\" width=\"85%\" title=\"支付宝\"></span></p></td><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/wxpay.png\" alt=\"微信\" width=\"85%\" title=\"微信\"></span></p></td></tr></tbody></table><div class=\"paragraph\"><p>有些打赏的朋友希望可以加个好友，欢迎关注D瓜哥的微信公众号，这样就可以通过公众号的回复直接给我发信息。</p></div><div class=\"paragraph\"><p><span class=\"image\"><img src=\"assets/images/wx-jikerizhi.png\" alt=\"wx jikerizhi\" width=\"98%\"></span></p></div><div class=\"admonitionblock tip\"><table><tbody><tr><td class=\"icon\"><i class=\"fa icon-tip\" title=\"Tip\"></i></td><td class=\"content\"><strong>公众号的微信号是: <code>jikerizhi</code></strong>。<em>因为众所周知的原因，有时图片加载不出来。如果图片加载不出来可以直接通过搜索微信号来查找我的公众号。</em></td></tr></tbody></table></div></div>|" $f
+    $gsed -i "s|<div id=\"content\">|<div id=\"content\"><div class=\"sect2\"><h3 id=\"_友情支持\">友情支持</h3><div class=\"paragraph\"><p>如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜</p></div><table class=\"tableblock frame-none grid-all stretch\"><colgroup><col style=\"width: 50%;\"><col style=\"width: 50%;\"></colgroup><tbody><tr><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/alipay.png\" alt=\"支付宝\" width=\"85%\" title=\"支付宝\"></span></p></td><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/wxpay.jpg\" alt=\"微信\" width=\"85%\" title=\"微信\"></span></p></td></tr></tbody></table><div class=\"paragraph\"><p>有些打赏的朋友希望可以加个好友，欢迎关注D瓜哥的微信公众号，这样就可以通过公众号的回复直接给我发信息。</p></div><div class=\"paragraph\"><p><span class=\"image\"><img src=\"assets/images/wx-jikerizhi.png\" alt=\"wx jikerizhi\" width=\"98%\"></span></p></div><div class=\"admonitionblock tip\"><table><tbody><tr><td class=\"icon\"><i class=\"fa icon-tip\" title=\"Tip\"></i></td><td class=\"content\"><strong>公众号的微信号是: <code>jikerizhi</code></strong>。<em>因为众所周知的原因，有时图片加载不出来。如果图片加载不出来可以直接通过搜索微信号来查找我的公众号。</em></td></tr></tbody></table></div></div>|" $f
     echo -e "\nadd qrcode for $f"
   fi
 done
