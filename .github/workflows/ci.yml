@@ -31,10 +31,11 @@ jobs:
 
       - name: Install AsciiDoctor 🐶
         run: |
+          gem install rouge
           gem install asciidoctor
           gem install asciidoctor-diagram
+          gem install asciidoctor-multipage
           gem install asciidoctor-comment-links
-          gem install rouge
 
       - name: Install Graphviz 🐰
         run: |
