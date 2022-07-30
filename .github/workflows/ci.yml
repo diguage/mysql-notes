@@ -56,7 +56,7 @@ jobs:
           npm install -g bpmn-js-cmd
           sudo apt -y install plantuml
 
-      - name: Run Hugo 🏗
+      - name: Build 🏗
         run: |
           asciidoctor -a toc=left -a stylesdir=assets/styles/ -a linkcss -r asciidoctor-multipage -r asciidoctor-comment-links -b multipage_html5 -D . index.adoc
 
