@@ -2,10 +2,7 @@
 :doctype: book
 :icons: font
 :source-highlighter: rouge
-:rouge-style: github
-// :source-highlighter: coderay
-// :coderay-style: monokai
-// :coderay-linenums-mode: table
+:rouge-style: monokai
 :source-language: sql  // 后面还可以覆盖
 :stylesdir: assets/styles/
 :linkcss:

@@ -17,7 +17,7 @@ include::_attributes.adoc[]
 
 有些打赏的朋友希望可以加个好友，欢迎关注D瓜哥的微信公众号，这样就可以通过公众号的回复直接给我发信息。
 
-image:assets/images/wx-jikerizhi.png[title="微信公众号：jikerizhi", alt="微信公众号：jikerizhi",width="98%",align="center"]
+image::assets/images/wx-jikerizhi.png[title="微信公众号：jikerizhi", alt="微信公众号：jikerizhi",width="98%",align="center"]
 
 TIP: **公众号的微信号是: `jikerizhi`**。__因为众所周知的原因，有时图片加载不出来。如果图片加载不出来可以直接通过搜索微信号来查找我的公众号。__
 
