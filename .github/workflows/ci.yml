@@ -54,7 +54,6 @@ jobs:
           npm install -g bytefield-svg
           # https://github.com/gtudan/bpmn-js-cmd
           npm install -g bpmn-js-cmd
-          sudo apt -y install plantuml
 
       - name: Build 🏗
         run: |
