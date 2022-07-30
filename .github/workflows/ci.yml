@@ -1,0 +1,101 @@
+
+name: GitHub Pages
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      # https://github.com/actions/setup-node
+      - name: Setup Node.js 🕸
+        uses: actions/setup-node@v3
+        with:
+          # https://github.com/nvm-sh/nvm#long-term-support
+          node-version: 'lts/*'
+
+      # https://github.com/ruby/setup-ruby
+      - name: Setup Ruby 💎
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.1
+
+      - name: Install AsciiDoctor 🐶
+        run: |
+          gem install asciidoctor
+          gem install asciidoctor-diagram
+          gem install asciidoctor-comment-links
+          gem install rouge
+
+      - name: Install Graphviz 🐰
+        run: |
+          sudo apt update -y -m
+          sudo apt install -y python3-pip
+          # https://graphviz.org/
+          sudo apt install -y graphviz
+          # http://blockdiag.com/en/seqdiag/index.html
+          pip3 install seqdiag
+          # http://blockdiag.com/en/blockdiag/index.html
+          pip3 install blockdiag
+          # http://blockdiag.com/en/actdiag/index.html
+          pip3 install actdiag
+          # http://blockdiag.com/en/nwdiag/index.html
+          pip3 install nwdiag
+          # https://github.com/Deep-Symmetry/bytefield-svg
+          npm install -g bytefield-svg
+          # https://github.com/gtudan/bpmn-js-cmd
+          npm install -g bpmn-js-cmd
+          sudo apt -y install plantuml
+
+      - name: Run Hugo 🏗
+        run: |
+          asciidoctor -a toc=left -a stylesdir=assets/styles/ -a linkcss -r asciidoctor-multipage -r asciidoctor-comment-links -b multipage_html5 -D . index.adoc
+
+      - name: Add Reward Qrcode 💰
+        run: |
+          find . -name "*.html" | grep -v "preface.html" | xargs -I {} sed -i "s|<div id=\"content\">|<div id=\"content\"><div class=\"sect2\"><h3 id=\"_友情支持\">友情支持</h3><div class=\"paragraph\"><p>如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜</p></div><table class=\"tableblock frame-none grid-all stretch\"><colgroup><col style=\"width: 50%;\"><col style=\"width: 50%;\"></colgroup><tbody><tr><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/alipay.png\" alt=\"支付宝\" width=\"85%\" title=\"支付宝\"></span></p></td><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/wxpay.jpg\" alt=\"微信\" width=\"85%\" title=\"微信\"></span></p></td></tr></tbody></table><div class=\"paragraph\"><p>有些打赏的朋友希望可以加个好友，欢迎关注D 瓜哥的微信公众号，这样就可以通过公众号的回复直接给我发信息。</p></div><div class=\"paragraph\"><p><span class=\"image\"><img src=\"assets/images/wx-jikerizhi.png\" alt=\"wx jikerizhi\" width=\"98%\"></span></p></div><div class=\"admonitionblock tip\"><table><tbody><tr><td class=\"icon\"><i class=\"fa icon-tip\" title=\"Tip\"></i></td><td class=\"content\"><strong>公众号的微信号是: <code>jikerizhi</code></strong>。<em>因为众所周知的原因，有时图片加载不出来。 如果图片加载不出来可以直接通过搜索微信号来查找我的公众号。</em></td></tr></tbody></table></div></div>|" {}
+          find . -name "*.html" | grep -v "index.html" | xargs -I {} sed -i 's|</head>|<script>var _hmt = _hmt \|\| [];(function () {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?ae79ae5854e141fa6c9a217b5dcf0e45";var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script></head>|' {}
+
+      - name: Compress Style 🍭
+        run: |
+          npm install cssnano-cli --location=global
+          cd assets/styles/
+          echo -e '\na{text-decoration:none;}p>code,strong>code{color: #d14 !important;background-color: #f5f5f5 !important;}' >> asciidoctor.css  
+          for f in `ls *.css`;
+          do
+            fn="${f%.*}.min.css";
+            cssnano $f $fn;
+            rm -rf $f;
+            mv $fn $f
+          done
+
+      - name: Rsync Deploy 🏹
+        uses: burnett01/rsync-deployments@5.2
+        with:
+          switches: -avzr --delete --exclude=".*" ./assets ./*.html
+          path: .
+          remote_path: ${{ secrets.DEPLOY_PATH }}
+          remote_host: ${{ secrets.DEPLOY_HOST }}
+          remote_port: ${{ secrets.DEPLOY_PORT }}
+          remote_user: ${{ secrets.DEPLOY_USER }}
+          remote_key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Change Files Mod 🔐
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            sudo chmod -R 777 *
