@@ -36,6 +36,7 @@ MySQL 5.0 和更高版本中的 `DECIMAL` 类型运行最多 65 个数字。
 .测试 `DECIMAL` 类型的最大数字数
 [{sql_source_attr}]
 ----
+-- D瓜哥 · https://www.diguage.com
 DROP TABLE IF EXISTS decimal_test;
 CREATE TABLE decimal_test (
   col1 DECIMAL(65, 10),

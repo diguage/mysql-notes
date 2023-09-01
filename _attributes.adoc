@@ -2,7 +2,11 @@
 :doctype: book
 :icons: font
 :source-highlighter: rouge
-:rouge-style: monokai
+:rouge-style: github
+// :rouge-style: monokai
+// :source-highlighter: coderay
+// :coderay-style: monokai
+// :coderay-linenums-mode: table
 :source-language: sql  // 后面还可以覆盖
 :stylesdir: assets/styles/
 :linkcss:
@@ -22,7 +26,8 @@
 :last-update-label: 最后更新时间
 :homepage: http://www.diguage.com/
 
-:sql_source_attr: source,sql,linenums,subs="attributes,verbatim"
+// 加 linenums 属性，则评论中的 URL 不会转化成链接
+:sql_source_attr: source,sql,subs="attributes,verbatim"
 
 ifdef::env-github[]
 :tip-caption: :bulb:

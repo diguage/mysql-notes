@@ -53,8 +53,8 @@ if [ ! -n `which html-minifier` ]; then
 fi
 
 # 删除以前的编译结果
-rm -rf *.html *.pdf
-ehco -e "\nremove the last processing result"
+echo -e "\nremove the last processing result"
+rm -rf *.html *.pdf $base_dir/assets/styles/*.css
 # $style_dir
 
 ## Web ###########
@@ -63,6 +63,7 @@ ehco -e "\nremove the last processing result"
 $asciidoctor -a toc=left \
              -a stylesdir=$style_dir \
              -a linkcss \
+             -r asciidoctor-comment-links \
              -r asciidoctor-multipage \
              -b multipage_html5 \
              -D . \
