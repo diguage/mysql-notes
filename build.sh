@@ -100,6 +100,12 @@ do
     $gsed -i "s|<div id=\"content\">|<div id=\"content\"><div class=\"sect2\"><h3 id=\"_友情支持\">友情支持</h3><div class=\"paragraph\"><p>如果您觉得这个笔记对您有所帮助，看在D瓜哥码这么多字的辛苦上，请友情支持一下，D瓜哥感激不尽，😜</p></div><table class=\"tableblock frame-none grid-all stretch\"><colgroup><col style=\"width: 50%;\"><col style=\"width: 50%;\"></colgroup><tbody><tr><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/alipay.png\" alt=\"支付宝\" width=\"85%\" title=\"支付宝\"></span></p></td><td class=\"tableblock halign-center valign-top\"><p class=\"tableblock\"><span class=\"image\"><img src=\"assets/images/wxpay.jpg\" alt=\"微信\" width=\"85%\" title=\"微信\"></span></p></td></tr></tbody></table><div class=\"paragraph\"><p>有些打赏的朋友希望可以加个好友，欢迎关注D瓜哥的微信公众号，这样就可以通过公众号的回复直接给我发信息。</p></div><div class=\"paragraph\"><p><span class=\"image\"><img src=\"assets/images/wx-jikerizhi.png\" alt=\"wx jikerizhi\" width=\"98%\"></span></p></div><div class=\"admonitionblock tip\"><table><tbody><tr><td class=\"icon\"><i class=\"fa icon-tip\" title=\"Tip\"></i></td><td class=\"content\"><strong>公众号的微信号是: <code>jikerizhi</code></strong>。<em>因为众所周知的原因，有时图片加载不出来。如果图片加载不出来可以直接通过搜索微信号来查找我的公众号。</em></td></tr></tbody></table></div></div>|" $f
     echo -e "\nadd qrcode for $f"
   fi
+
+  if [ "$f" == "./index.html" ]; then
+    # 增加源码仓库地址
+    $gsed -i "s|<div class=\"ulist\">|<div class=\"sect2\"><h3 id=\"_官网及版本库\">官网及版本库</h3><div class=\"paragraph\"><p>本文档的版本库托管在 Github 上，另外单独发布。</p></div><div class=\"dlist\"><dl><dt class=\"hdlist1\">“地瓜哥”博客网</dt><dd><p><a href=\"https://www.diguage.com/\" class=\"bare\" target=\"_blank\" rel=\"noopener\">https://www.diguage.com/</a> 。D瓜哥的个人博客。欢迎光临，不过，内容很杂乱，请见谅。不见谅，你来打我啊，😂😂</p></dd><dt class=\"hdlist1\">本文档官网</dt><dd><p><a href=\"https://notes.diguage.com/mysql/\" class=\"bare\" target=\"_blank\" rel=\"noopener\">https://notes.diguage.com/mysql/</a> 。为了方便阅读，这里展示了处理好的文档。阅读请点击这个网址。</p></dd><dt class=\"hdlist1\">本文档版本库</dt><dd><p><a href=\"https://github.com/diguage/mysql-notes\" class=\"bare\" target=\"_blank\" rel=\"noopener\">https://github.com/diguage/mysql-notes</a> 。欢迎大家发送 PR。</p></dd></dl></div></div><div class=\"ulist\"><h3>目录</h3>|" $f
+    echo -e "\nadd source url for $f"
+  fi
 done
 
 # $htmlminifier -c html-minifier.config.json $origin_html_file_name -o $web_html_file_name
