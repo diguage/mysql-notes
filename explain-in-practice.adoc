@@ -1,5 +1,5 @@
 [#explain-in-practice]
-== `EXPLAIN` 实践
+= `EXPLAIN` 实践
 
 如果 `EXPLAIN` 执行计划的 `Extra` 列包含 “Using temporary”，则说明这个查询使用了隐式临时表。
 

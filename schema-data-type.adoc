@@ -1,11 +1,11 @@
 [#schema-data-type]
-== Schema 设计
+= Schema 设计
 include::_attributes.adoc[]
 
 良好的逻辑设计和物理设计是高性能的基石。
 
 [#data-type]
-=== 数据类型的选择
+== 数据类型的选择
 
 . 更小的通常更好
 . 简单就好
@@ -15,7 +15,7 @@ InnoDB 使用单独的位存储 Null 值，所以对于稀疏数据（多数为 
 
 MySQL 很多数据类型只是别名，可以用 `SHOW CREATE TABLE` 查看对应的基本类型。
 
-==== 整数
+=== 整数
 
 整数类型： `TINYINT` 、 `SMALLINT` 、  `MEDIUMINT` 、  `INT` 、  `BIGINT`；分别使用 8、16、24、32、64 位存储空间。存储的范围从 -2^(N-1)^ 到 2^(N-1)^-1。
 
@@ -25,7 +25,7 @@ MySQL 很多数据类型只是别名，可以用 `SHOW CREATE TABLE` 查看对�
 
 MySQL 可以为整数类型指定宽度，例如 `INT(11)`，这实际没有意义：它不会限制值的合法范围。对于存储和计算来说， `INT(1)` 和 `INT(20)` 是相同的。
 
-==== 实数
+=== 实数
 
 `DECIMAL` 类型用于存储精确的小数。CPU 不支持对 `DECIMAL` 的直接计算。
 
@@ -53,7 +53,7 @@ MySQL 使用 `DOUBLE` 作为内部浮点计算的类型。
 
 在数据量比较大的时候，可以考虑使用 `BIGINT` 代替 `DECIMAL` ，将需要存储的货币单位根据小数的位数乘以相应的倍数即可。
 
-==== 字符串类型
+=== 字符串类型
 
 从 MySQL 4.1 开始，每个字符串列可以定义自己的字符集和排序规则，或者说校对规则。
 
@@ -132,7 +132,7 @@ SELECT CONCAT("'", varchar_col, "'") FROM varchar_test; -- <1>
 
 TIP: 慷慨是不明智的。
 
-===== BLOB和TEXT 类型
+==== BLOB和TEXT 类型
 
 `BLOB` 和 `TEXT` 都是为存储很大的数据而设计的字符串数据类型，分别采用二进制和字符串方式存储。
 
@@ -149,7 +149,7 @@ MySQL 把每个 `BLOB` 和 `TEXT` 值当做一个独立的对象处理。InnoDB 
 
 MySQL 不能将 `BLOB` 和 `TEXT` 列全部长度的字符串进行索引。
 
-===== 使用枚举（ENUM）代替字符串
+==== 使用枚举（ENUM）代替字符串
 
 枚举列可以把一些不重复的字符串存储成一个预定义的集合。MySQL 在存储枚举时非常紧凑，会根据列表值的数量压缩到一个或者两个字节中。MySQL 在内部会将每个值在列表中的位置保存为整数，并且在表的 _.frm_ 文件中保存 “数字-字符串” 映射关系的 “查找表”。
 
@@ -185,7 +185,7 @@ SELECT e FROM enum_test ORDER BY field(e, 'apple', 'dog', 'fish'); -- <3>
 
 // TODO 补充说明
 
-==== 日期和时间类型
+=== 日期和时间类型
 
 MySQL 能存储的最小时间粒度为秒。但，也可以使用微秒级的粒度进行临时运算。
 
@@ -209,9 +209,9 @@ TIP: 如果在东八区保存为 2016年12月05日17:34:17，在格林尼治显�
 可以使用 `BIGINT` 类型存储微秒级别的时间戳，或者使用 `DOUBLE` 存储秒之后的小数部分。
 
 
-==== 位数据类型
+=== 位数据类型
 
-==== 选择标识符（键列）
+=== 选择标识符（键列）
 
 更有可能使用标识列与其他值进行比较，或者通过标识列寻找其他列。
 
@@ -236,13 +236,13 @@ TIP: 如果在东八区保存为 2016年12月05日17:34:17，在格林尼治显�
 UUID 值还是有一定的顺序的。
 
 
-==== 特殊类型数据
+=== 特殊类型数据
 
 * 低于秒级精度的时间戳
 * IPv4 地址 -- `INET_ATON()` 和 `INET_NTOA()`。
 
 [[schema-design-trap]]
-=== MySQL Schema 设计中的陷阱
+== MySQL Schema 设计中的陷阱
 
 太多的列:: MySQL 的存储引擎 API 工作时需要在服务器层和存储引擎层之间通过行缓冲格式拷贝数据，然后在服务器层将缓冲内容解码成各个列。从行缓冲中将解码过的列转换成行数据结构的操作代价是非常高的。 MyISAM 定长行结构正好匹配，不需要转换。MyISAM 的变长行结构和 InnoDB 的行结构则总是需要转换。**转换的代价依赖于列的数量。**
 太多的关联:: MySQL 限制了每个关联操作最多只能有 61 张表。一个粗略的经验法则，如果希望查询执行得快速且并发性好，单个查询最好在 12 个表以内做关联。
@@ -251,7 +251,7 @@ UUID 值还是有一定的顺序的。
 非此发明的 NULL:: 建议不要存 NULL。但是不要走极端。当确实需要表示未知值时也不要害怕使用 NULL。处理 NULL 确实不容易，但有时候会比它的替代方案更好。
 
 [[schema-paradigm-and-antiparadigm]]
-=== 范式和反范式
+== 范式和反范式
 
 第一范式:: 符合1NF的关系中的每个属性都不可再分。1NF是所有关系型数据库的最基本要求。
 
@@ -284,7 +284,7 @@ https://www.zhihu.com/question/24696366/answer/29189700[解释一下关系数据
 缓存衍生值也是有用的。
 
 [[schema-cache-and-summary-table]]
-=== 缓存表和汇总表
+== 缓存表和汇总表
 
 有时提升性能最好的方法是在同一张表中保存衍生的冗余数据；有时也需要创建一张完全独立的汇总表或缓存表。
 
@@ -310,7 +310,7 @@ CREATE TABLE my_summary_new LIKE my_summary;
 RENAME TABLE my_summary TO my_summary_old, my_summary_new TO my_summary;
 ----
 
-==== 物化视图
+=== 物化视图
 
 物化视图是预先计算并且存储在磁盘上的表，可以通过各种各样的策略刷新和更新。
 
@@ -318,7 +318,7 @@ MySQL 并不原生支持物化视图。
 
 Justin Swanhart 的开源工具 Flexviews， https://github.com/greenlion/swanhart-tools[Swanhart Toolkit^]。
 
-==== 计数器表
+=== 计数器表
 
 可以利用 `CurrentHashMap` 分段锁的思想，将对同一个计算器的修改，打散到多个变量上，然后在求和。
 
@@ -370,7 +370,7 @@ DELETE FROM daily_hit_counter WHERE slot <> 0 AND cnt = 0;
 TIP: 为了提升度查询的速度，可以建立额外索引；这样会增加些查询的负担，虽然写的慢，但是更显著提高了读操作的性能。
 
 [[schema-speed-up-alter]]
-=== 加快 `ALTER TABLE` 操作的速度
+== 加快 `ALTER TABLE` 操作的速度
 
 MySQL 的 `ALTER TABLE` 操作的性能对于大表来说是个大问题。 MySQL 执行大部分修改表结构操作的方法是用新的结构创建一个空表，从旧表中查出所有数据插入新表，然后删除旧表。
 
@@ -397,7 +397,7 @@ ALTER TABLE film
 
 TIP: `ALTER TABLE` 允许使用 `ALTER COLUMN`、 `MODIFY COLUMN` 和 `CHANGE COLUMN` 语句修改列。这三种操作都是不一样的。 _有什么不一样呢？_
 
-==== 只修改 _.frm_ 文件
+=== 只修改 _.frm_ 文件
 
 下面的这些操作有可能不需要重建表：
 
@@ -411,7 +411,7 @@ TIP: `ALTER TABLE` 允许使用 `ALTER COLUMN`、 `MODIFY COLUMN` 和 `CHANGE CO
 . 交换 _.frm_ 文件；
 . 执行 `UNLOCK TABLES` 来释放第2步的读锁。
 
-==== 快速创建 MyISAM 索引
+=== 快速创建 MyISAM 索引
 
 为了高效地载入数据到 MyISAM 表中，有一个常用的技巧是先禁用索引、载入数据，然后重新启用索引。
 
@@ -429,7 +429,7 @@ ALTER TABLE load_data ENABLE KEYS;
 现代版本的 InnoDB 中有类似的技巧。
 
 [[schema-summary]]
-=== 总结
+== 总结
 
 * 尽量避免过度设计；
 * 使用小而简单的合适数据类型，除非真的需要，否则应尽可能避免使用 `NULL`；

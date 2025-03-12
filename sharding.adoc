@@ -1,7 +1,7 @@
 [#sharding]
-== 分库分表分片
+= 分库分表分片
 
-=== 问题分析
+== 问题分析
 
 . 主从复制
 . 读写分离
@@ -39,10 +39,10 @@
 垂直拆分竟然可以分成两层面来搞：大的角度，按照业务拆分成商品、用户等多个模块；小的方面，把一张大表拆分成多个小表。
 
 
-=== Sharding Sphere
+== Sharding Sphere
 
 
-==== 分片的核心概念
+=== 分片的核心概念
 
 逻辑表:: 水平拆分的数据库（表）的相同逻辑和数据结构表的总称。例：订单数据根据主键尾数拆分为10张表，分别是torder0到torder9，他们的逻辑表名为t_order。
 
@@ -56,7 +56,7 @@
 
 逻辑索引:: 某些数据库（如：PostgreSQL）不允许同一个库存在名称相同索引，某些数据库（如：MySQL）则允许只要同一个表中不存在名称相同的索引即可。 逻辑索引用于同一个库不允许出现相同索引名称的分表场景，需要将同库不同表的索引名称改写为索引名 + 表名，改写之前的索引名称成为逻辑索引。
 
-==== 分片
+=== 分片
 
 分片键:: 用于分片的数据库字段，是将数据库(表)水平拆分的关键字段。例：将订单表中的订单主键的尾数取模分片，则订单主键为分片字段。 SQL中如果无分片字段，将执行全路由，性能较差。 除了对单分片字段的支持，ShardingSphere也支持根据多个字段进行分片。
 
@@ -85,7 +85,7 @@ image::assets/images/rewrite-architecture_cn.png[title="改写规则", alt="改�
 image::assets/images/execute-architecture_cn.png[title="改写规则", alt="改写规则", width="95%"]
 
 
-=== 参考资料
+== 参考资料
 
 . https://mp.weixin.qq.com/s/frdj6vFz24XEimPPQAgnVA[『互联网架构』软件架构-mysql终级解决方案分库分表（65）]
 . https://mp.weixin.qq.com/s/Ktf__hB6kzZrhar4UG6Nog[『互联网架构』软件架构-Sharding-Sphere分库分表（66）]

@@ -1,5 +1,5 @@
 [#locks]
-== 锁
+= 锁
 
 * *共享锁 Shared Lock*，简称 S 锁
 * *独占锁 Exclusive Lock*，也称排他锁，简称 X 锁

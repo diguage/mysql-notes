@@ -9,26 +9,26 @@ include::analytics.htm[]
 
 :sectnums!:
 
-include::preface.adoc[]
+include::preface.adoc[leveloffset=+1]
 
 :sectnums:
 
-include::schema-data-type.adoc[]
+include::schema-data-type.adoc[leveloffset=+1]
 
-include::transaction.adoc[]
+include::transaction.adoc[leveloffset=+1]
 
-include::high-performance-index.adoc[]
+include::high-performance-index.adoc[leveloffset=+1]
 
-include::query-optimization.adoc[]
+include::query-optimization.adoc[leveloffset=+1]
 
-include::locks.adoc[]
+include::locks.adoc[leveloffset=+1]
 
-include::sharding.adoc[]
+include::sharding.adoc[leveloffset=+1]
 
-include::explain-in-detail.adoc[]
+include::explain-in-detail.adoc[leveloffset=+1]
 
-include::explain-in-practice.adoc[]
+include::explain-in-practice.adoc[leveloffset=+1]
 
-include::references.adoc[]
+include::references.adoc[leveloffset=+1]
 
-include::license.adoc[]
+include::license.adoc[leveloffset=+1]
