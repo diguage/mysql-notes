@@ -11,14 +11,14 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
       # https://github.com/actions/setup-node
       - name: Setup Node.js 🕸
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           # https://github.com/nvm-sh/nvm#long-term-support
           node-version: 'lts/*'
@@ -27,7 +27,7 @@ jobs:
       - name: Setup Ruby 💎
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.1
+          ruby-version: 3.3
 
       - name: Install AsciiDoctor 🐶
         run: |
@@ -81,8 +81,9 @@ jobs:
             mv $fn $f
           done
 
+      # https://github.com/Burnett01/rsync-deployments
       - name: Rsync Deploy 🏹
-        uses: burnett01/rsync-deployments@5.2
+        uses: burnett01/rsync-deployments@7.0.2
         with:
           switches: -avzr --delete --exclude=".*" ./assets ./*.html
           path: .
@@ -92,8 +93,9 @@ jobs:
           remote_user: ${{ secrets.DEPLOY_USER }}
           remote_key: ${{ secrets.DEPLOY_KEY }}
 
+      #
       - name: Change Files Mod 🔐
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           port: ${{ secrets.DEPLOY_PORT }}
