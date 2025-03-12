@@ -1,9 +1,59 @@
 [#locks]
 = 锁
 
+== 全局锁
+
+全局锁就是对整个数据库实例加锁。
+
+. `FLUSH TABLES WITH READ LOCK` -- 简称 FTWRL。让整个库处于只读状态，数据更新语句（数据的增删改）、数据定义语句（包括建表、修改表结构等）和更新类事务的提交语句都会被阻塞。通常用于全库逻辑备份，保证数据是出于某个时间点的。如果客户端链接异常中断，那么锁会自动释放。
+. `mysqldump` + `–single-transaction` 参数 -- 当 `mysqldump` 使用参数 `–single-transaction` 的时候，导数据之前就会启动一个事务，来确保拿到一致性视图。而由于 MVCC 的支持，这个过程中数据是可以正常更新的。这就要求引擎支持 MVCC，像 MyISAM 引擎就不行。
+. `SET GLOBAL readonly = TRUE` -- 客户端链接断开也不会释放锁；通常判断是否为只读库也是使用 `readonly` 的值来判断，影响面更大。
+
+FTWRL 前有读写的话， FTWRL 都会等待读写执行完毕后才执行。FTWRL 执行的时候要刷脏页的数据到磁盘，因为要保持数据的一致性 ，理解的执行 FTWRL 时候是 所有事务 都提交完毕的时候。
+
+
+全库只读 `readonly = true` 在 slave 上，如果用户有超级权限的话  readonly 是失效的。
+
+== 表级锁
+
+===  表锁 `LOCK TABLES tableName READ/WRITE`
+
 * *共享锁 Shared Lock*，简称 S 锁
 * *独占锁 Exclusive Lock*，也称排他锁，简称 X 锁
 * *意向共享锁 Intention Shared Lock*，简称 IS 锁。当事务准备在某条记录上加 S 锁时，需要先在表级别加一个 IS 锁。
 * *意向独占锁 Intention Exclusive Lock*，简称 IX 锁。当事务准备在某条记录上加 X 锁时，需要先在表级别加一个 IX 锁。
 
 NOTE: 意向共享锁 和 意向独占锁 并不是真正的锁，而是相当于一个公告牌。表示有记录被锁定了。避免在锁表（对表加 共享锁 或 独占锁 时去遍历全部记录。）
+
+=== 元数据锁 MDL（metadata lock)
+
+当对一个表做增删改查操作的时候，加 MDL 读锁；当要对表做结构变更操作的时候，加 MDL 写锁。
+
+另外，MDL 锁是自动加的，如果事务长时间不提交，也会导致整个库挂掉。所以，要尽量避免耗时长的事务。
+
+=== AUTO-INC 锁
+
+AUTO_INCREMENT 有两种实现方式：
+
+. AUTO-INC 锁，在执行插入语句时，就加一个表级别的 AUTO-INC 锁，然后为每条待插入记录的 AUTO_INCREMENT 列分配递增的值。锁单个插入语句，完成插入即释放锁。
+. 轻量级锁，为插入语句的 AUTO_INCREMENT 列获取轻量级锁，在生成所需要的值后，就释放该锁，而不需要等待完成插入后才释放。插入数据有可能是乱序的，导致主从复制不安全。
+
+可以通过设置 `innodb_autoinc_lock_mode` 来控制使用哪种方式： `0` 即 AUTO-INC 锁；`2` 即轻量级锁； `1` 是混着用（插入数量确定时采用轻量级锁；不确定时采用 AUTO-INC 锁）。
+
+
+== 行锁
+
+// * *共享锁 Shared Lock*，简称 S 锁
+// * *独占锁 Exclusive Lock*，也称排他锁，简称 X 锁
+
+=== Record Lock
+
+=== 间隙锁 Gap Lock
+
+=== Next-Key Lock
+
+Next-Key Lock = Record Lock + Gap Lock。
+
+=== 插入意向锁 Insert Intention Lock
+
+=== 隐式锁
