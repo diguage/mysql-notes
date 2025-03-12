@@ -48,12 +48,31 @@ AUTO_INCREMENT 有两种实现方式：
 
 === Record Lock
 
+Record Lock 即是常说的行锁，仅仅把一条记录锁上。
+
+Record Lock 有 S 锁 和 X 锁之分。
+
+[NOTE]
+====
+S 锁 和 X 锁类似 Java 中的 `ReadWriteLock`，其行为和 `ReentrantReadWriteLock` 几乎一模一样：读读并发、读写互斥、写写互斥。
+====
+
 === 间隙锁 Gap Lock
+
+间隙锁主要是为了解决插入时的幻读问题。由于插入时，还没有数据记录，所以，无法创建该数据对应的 Record Lock。所以，提出了 Gap Lock 锁。
+
+Gap Lock 的作用仅仅是为了防止插入幻影记录而已。
+
+给一条记录加 Gap 锁，则不允许其他事务向这条记录前面的插入新记录。为了解决之后可能插入新记录的问题，可以在索引中最后一条记录所在页面的 `Supremum` 记录（表示该页中最大的记录）上加 Gap 锁，这样就可以阻止其他事务插入新记录了。
 
 === Next-Key Lock
 
 Next-Key Lock = Record Lock + Gap Lock。
 
 === 插入意向锁 Insert Intention Lock
+
+在内存中生成的一个锁结构，表示有事务想在某个间隙插入新记录，但是现在处于等待状态。
+
+插入意向锁并不会阻止别的事务继续获取该记录上的任何类型的锁，非常鸡肋。
 
 === 隐式锁

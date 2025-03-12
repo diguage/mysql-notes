@@ -21,6 +21,10 @@ include::high-performance-index.adoc[leveloffset=+1]
 
 include::query-optimization.adoc[leveloffset=+1]
 
+include::redo-log.adoc[leveloffset=+1]
+
+include::undo-log.adoc[leveloffset=+1]
+
 include::locks.adoc[leveloffset=+1]
 
 include::sharding.adoc[leveloffset=+1]
