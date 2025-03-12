@@ -1,5 +1,5 @@
 = MySQL 学习笔记^Alpha^
-D瓜哥 <https://www.diguage.com/>
+D瓜哥 <https://www.diguage.com>
 {docdate}
 include::_attributes.adoc[]
 
