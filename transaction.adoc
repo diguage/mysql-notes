@@ -37,8 +37,7 @@ Repeatable Read(可重复读) 是 MySQL 默认事务隔离级别。
 . *不可重复读 NonRepeatable Read* -- 如果一个事务**修改**了另外一个未提交事务**读取**的数据，就意味着发生了不可重复读现象，或者叫模糊读 Fuzzy Read 现象。可以把不可重复读现象简称为 P2。
 . *幻读 Phantom* -- 如果一个事务先根据某些搜索条件查询出一些记录，在该事务**未提交时**，另一个事务**写入**了一些**符合那些搜索条件**的记录（CUD 任意一种），就意味着发生了幻读现象。可以把幻读现象简称为 P3。
 
-TIP: 这里采用 https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/tr-95-51.pdf[《A Critique of ANSI SQL Isolation Levels》^] 论文中的定义。
-
+TIP: 这里采用 https://arxiv.org/abs/cs/0701157[《A Critique of ANSI SQL Isolation Levels》^] 论文中的定义。
 
 
 ==== Phantom Read(幻读)

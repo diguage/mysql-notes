@@ -21,6 +21,8 @@ include::high-performance-index.adoc[]
 
 include::query-optimization.adoc[]
 
+include::locks.adoc[]
+
 include::sharding.adoc[]
 
 include::explain-in-detail.adoc[]
